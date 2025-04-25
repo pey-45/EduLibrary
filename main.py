@@ -149,7 +149,6 @@ def buscar_libros(conn):
                  isbn, f"%{isbn}%" if isbn is not None else None, sinopsis, f"%{sinopsis}%" if sinopsis is not None else None, id_categoria, id_categoria))
             
             libros = cur.fetchall()
-            conn.commit()
             
             if len(libros) == 0:
                 print("No se han encontrado libros.")
@@ -171,3 +170,47 @@ def buscar_libros(conn):
             conn.rollback()
             
             
+def consultar_libro(conn):
+    """
+    Consulta un libro en la base de datos. Pide al usuario el id del libro.
+    :param conn: La conexión abierta a la BD
+    :return: Nada
+    """
+    with conn.cursor() as cur:
+        try:
+            print("+-----------------+")
+            print("| Consultar libro |")
+            print("+-----------------+")
+            
+            sid_libro = input("Id del libro: ")
+            try:
+                id_libro = int(sid_libro)
+            except ValueError:
+                print("Error: El id del libro debe ser un número entero.")
+                return
+            
+            cur.execute("""
+                SELECT * FROM Libro 
+                WHERE idLibro = %s
+                """, 
+                (id_libro,))
+            
+            libro = cur.fetchone()
+            
+            if libro is None:
+                print("No se ha encontrado el libro.")
+                return
+            
+            print(f"ID: {libro[0]}")
+            print(f"Titulo: {libro[1]}")
+            print(f"Autor: {libro[2]}")
+            print(f"Año de publicación: {libro[3]}")
+            print(f"ISBN: {libro[4]}")
+            print(f"Sinopsis: {libro[5]}")
+            print(f"Id categoria: {libro[6]}")
+        
+        except psycopg2.Error as e:
+            print_generic_error(e)
+            conn.rollback()
+            
+    
