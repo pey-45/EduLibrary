@@ -1,0 +1,45 @@
+LIBRO
+
+- [POST] añadir libro
+- [GET] buscar libros filtrando por palabras clave, autor/es y categoría/s
+- [GET] consultar información de libro (con nombre de categoría, disponibilidad y precio)
+- [PUT] reasignar categoría
+- [PUT] modificar libro manualmente
+- [DELETE] eliminar libro
+
+
+PRECIOLIBRO
+
+- [POST] modificar precio del libro con porcentaje y manualmente
+- [GET] ver precio de libro en fecha concreta
+- [GET] ver historial de precios de libro
+
+
+CATEGORÍA
+
+- [POST] añadir categoría
+- [GET] consultar categorías
+- [PUT] modificar categoría
+- [DELETE] eliminar categoría
+
+PRÉSTAMO 
+
+- [POST] efectuar préstamo
+- [GET] ver historial de préstamos de un libro
+- [GET] ver historial de préstamos de un estudiante
+- [GET] ver préstamos vigentes y por rango de fechas
+- [GET] ver detalles de un préstamo
+- [GET] verificar el estado de un préstamo
+- [PUT] modificar comentarios de un préstamo
+- [PUT] dar un préstamo por finalizado
+- [DELETE] eliminar registro de un préstamo
+
+
+ESTUDIANTE
+
+- [POST] añadir estudiante
+- [GET] ver detalles de usuario (con libros en posesión)
+- [GET] ver libros en posesión
+- [PUT] aumentar curso en 1 unidad de estudiantes de un curso determinado
+- [PUT] modificar estudiante manualmente
+- [DELETE] eliminar estudiante
