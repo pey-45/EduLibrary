@@ -1,7 +1,7 @@
 LIBRO
 
 - [POST] añadir libro
-- [GET] buscar libros filtrando por palabras clave, autor/es y categoría/s
+- [GET] buscar libros filtrando por sus datos
 - [GET] consultar información de libro (con nombre de categoría, disponibilidad y precio)
 - [PUT] reasignar categoría
 - [PUT] modificar libro manualmente

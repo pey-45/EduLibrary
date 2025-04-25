@@ -48,7 +48,12 @@ def anadir_libro(conn):
             autor = None if sautor == "" else sautor
             
             sanio_publicacion = input("Año de publicación: ")
-            anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
+            try:
+                anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
+            except ValueError:
+                print("Error: El año de publicación debe ser un número entero.")
+                return
+            
             
             sisbn = input("ISBN: ")
             isbn = None if sisbn == "" else sisbn
@@ -57,19 +62,20 @@ def anadir_libro(conn):
             sinopsis = None if ssinopsis == "" else ssinopsis
         
             sid_categoria = input("Id de categoria: ")
-            id_categoria = None if sid_categoria == "" else int(sid_categoria)
+            try:
+                id_categoria = None if sid_categoria == "" else int(sid_categoria)
+            except ValueError:
+                print("Error: El id de categoría debe ser un número entero.")
+                return
             
             cur.execute("""
                 INSERT INTO Libro (titulo, autor, anioPublicacion, isbn, sinopsis, idCategoria) 
                 VALUES (%s, %s, %s, %s, %s, %s)
-            """, 
-            (titulo, autor, anio_publicacion, isbn, sinopsis, id_categoria))
+                """, 
+                (titulo, autor, anio_publicacion, isbn, sinopsis, id_categoria))
             
             conn.commit()
             print("Libro añadido correctamente.")
-            
-        except ValueError as e:
-            print("Error: El año de publicación debe ser un número entero.")
             
         except psycopg2.Error as e:
             if e.pgcode == psycopg2.errorcodes.UNIQUE_VIOLATION:
@@ -90,3 +96,78 @@ def anadir_libro(conn):
             else:
                 print_generic_error(e) 
             conn.rollback()
+            
+            
+def buscar_libros(conn):
+    """
+    Busca libros en la base de datos. Pide al usuario palabras clave, autor y/o categorías.
+    :param conn: La conexión abierta a la BD
+    :return: Nada
+    """
+    with conn.cursor() as cur:
+        try:
+            print("+--------------+")
+            print("| Buscar libro |")
+            print("+--------------+")
+            
+            stitulo = input("Titulo: ")
+            titulo = None if stitulo == "" else stitulo 
+            
+            sautor = input("Autor: ")
+            autor = None if sautor == "" else sautor
+            
+            sanio_publicacion = input("Año de publicación: ")
+            try:
+                anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
+            except ValueError:
+                print("Error: El año de publicación debe ser un número entero.")
+                return
+            
+            sisbn = input("ISBN: ")
+            isbn = None if sisbn == "" else sisbn
+            
+            ssinopsis = input("Sinopsis: ")
+            sinopsis = None if ssinopsis == "" else sinopsis
+        
+            sid_categoria = input("Id de categoria: ")
+            try:
+                id_categoria = None if sid_categoria == "" else int(sid_categoria)
+            except ValueError:
+                print("Error: El id de categoría debe ser un número entero.")
+                return
+            
+            cur.execute("""
+                SELECT * FROM Libro 
+                WHERE (%s IS NULL OR titulo ILIKE %s) AND 
+                      (%s IS NULL OR autor ILIKE %s) AND 
+                      (%s IS NULL OR anioPublicacion = %s) AND 
+                      (%s IS NULL OR isbn ILIKE %s) AND 
+                      (%s IS NULL OR sinopsis ILIKE %s) AND 
+                      (%s IS NULL OR idCategoria = %s)
+                """, 
+                (titulo, f"%{titulo}%" if titulo is not None else None, autor, f"%{autor}%" if autor is not None else None, anio_publicacion, anio_publicacion, 
+                 isbn, f"%{isbn}%" if isbn is not None else None, sinopsis, f"%{sinopsis}%" if sinopsis is not None else None, id_categoria, id_categoria))
+            
+            libros = cur.fetchall()
+            conn.commit()
+            
+            if len(libros) == 0:
+                print("No se han encontrado libros.")
+                return
+            
+            print(f"Se han encontrado {len(libros)} libros.")
+            
+            for libro in libros:
+                print(f"ID: {libro[0]}")
+                print(f"Titulo: {libro[1]}")
+                print(f"Autor: {libro[2]}")
+                print(f"Año de publicación: {libro[3]}")
+                print(f"ISBN: {libro[4]}")
+                print(f"Sinopsis: {libro[5]}")
+                print(f"Id categoria: {libro[6]}")
+        
+        except psycopg2.Error as e:
+            print_generic_error(e)
+            conn.rollback()
+            
+            
