@@ -9,22 +9,22 @@ def print_generic_error(e): print(f"Error: {getattr(e, 'pgcode', 'Unknown')} - {
 
 def connect_db():
      """
-     Establece una conexión con la base de datos predeterminada del usuario (usando DNS vacío).
-     :return: La conexión establecida con la base de datos. Si no se puede establecer, el programa termina.
+     Establece una conexion con la base de datos predeterminada del usuario (usando DNS vacio).
+     :return: La conexion establecida con la base de datos. Si no se puede establecer, el programa termina.
      """
      try:
-        conn = psycopg2.connect("")
+        conn = psycopg2.connect(host='localhost', user='postgres', password='1234', dbname='biblioteca')
         conn.autocommit = False
         return conn
      except psycopg2.Error:
-         print("Error de conexión")
+         print("Error de conexion")
          sys.exit(1)
          
          
 def disconnect_db(conn):
     """
-    Cierra la conexión con la base de datos, realizando antes un commit de la transacción activa.
-    :param conn: La conexión activa con la base de datos
+    Cierra la conexion con la base de datos, realizando antes un commit de la transaccion activa.
+    :param conn: La conexion activa con la base de datos
     :return: None
     """
     try:
@@ -37,18 +37,17 @@ def disconnect_db(conn):
 # 1
 def anadir_libro(conn):
     """
-    Añade un nuevo libro a la biblioteca solicitando al usuario todos los datos necesarios.
-    :param conn: La conexión activa con la base de datos
+    Anade un nuevo libro a la biblioteca solicitando al usuario todos los datos necesarios.
+    :param conn: La conexion activa con la base de datos
     :return: None
     """
 
     sql_sentence = """
-        INSERT INTO 
-            Libro (titulo, autor, anioPublicacion, isbn, sinopsis, idCategoria) 
-        VALUES 
-            (%(t)s, %(a)s, %(aP)s, %(i)s, %(s)s, %(iC)s)
+        insert into 
+            libro (titulo, autor, aniopublicacion, isbn, sinopsis, idcategoria)
+        values
+            (%(t)s, %(a)s, %(ap)s, %(i)s, %(s)s, %(ic)s)
     """
-
 
     print("+--------------+")
     print("| Anadir libro |")
@@ -60,11 +59,11 @@ def anadir_libro(conn):
     sautor = input("Autor: ").strip()
     autor = None if sautor == "" else sautor
 
-    sanio_publicacion = input("Año de publicación: ").strip()
+    sanio_publicacion = input("Anio de publicacion: ").strip()
     try:
         anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
     except ValueError:
-        print("Error: El año de publicación debe ser un número entero.")
+        print("Error: El anio de publicacion debe ser un numero entero.")
         return
 
     sisbn = input("ISBN: ").strip()
@@ -77,7 +76,7 @@ def anadir_libro(conn):
     try:
         id_categoria = None if sid_categoria == "" else int(sid_categoria)
     except ValueError:
-        print("Error: El id de categoría debe ser un número entero.")
+        print("Error: El id de categoria debe ser un numero entero.")
         return
 
     with conn.cursor() as cur:
@@ -85,14 +84,14 @@ def anadir_libro(conn):
             cur.execute(sql_sentence, {
                 't': titulo,
                 'a': autor,
-                'aP': anio_publicacion,
+                'ap': anio_publicacion,
                 'i': isbn,
                 's': sinopsis,
-                'iC': id_categoria
+                'ic': id_categoria
             })
             
             conn.commit()
-            print("Libro añadido correctamente.")
+            print("Libro anadido correctamente.")
             
         except psycopg2.Error as e:
             if e.pgcode == psycopg2.errorcodes.UNIQUE_VIOLATION:
@@ -117,42 +116,47 @@ def anadir_libro(conn):
 # 2
 def buscar_libros(conn):
     """
-    Realiza una búsqueda de libros en la biblioteca según los criterios especificados por el usuario.
-    :param conn: La conexión activa con la base de datos
+    Realiza una busqueda de libros en la biblioteca segun los criterios especificados por el usuario.
+    :param conn: La conexion activa con la base de datos
     :return: None
     """
 
     sql_sentence = """
-        SELECT 
-            L.id, 
-            L.titulo, 
-            L.autor, 
-            L.anioPublicacion, 
-            L.isbn, 
-            C.nombre AS nombreCategoria,
+        select 
+            l.id,
+            l.titulo,
+            l.autor,
+            l.aniopublicacion,
+            l.isbn,
+            c.nombre as nombrecategoria,
             (
-                SELECT precio
-                FROM PrecioLibro
-                WHERE idLibro = L.id
-                ORDER BY fecha DESC
-                LIMIT 1 
-            ) AS precioActual,
-            NOT EXISTS (
-                SELECT 1
-                FROM Prestamo P
-                WHERE P.idLibro = L.id
-                AND P.fechaDevolucion IS NULL
-            ) AS disponible
-        FROM 
-            Libro L
-        LEFT JOIN 
-            Categoria C ON L.idCategoria = C.id
-        WHERE 
-            (%(t)s IS NULL OR L.titulo ILIKE %(t0)s)
-            AND (%(a)s IS NULL OR L.autor ILIKE %(a0)s)
-            AND (%(aP)s IS NULL OR L.anioPublicacion = %(aP)s)
-            AND (%(i)s IS NULL OR L.isbn ILIKE %(i0)s)
-            AND (%(iC)s IS NULL OR L.idCategoria = %(iC)s)
+                select precio
+                from preciolibro
+                where idlibro = l.id
+                order by fecha desc
+                limit 1 
+            ) as precioactual,
+            not exists (
+                select 1
+                from prestamo p
+                where p.idlibro = l.id 
+                and p.fechadevolucion is null
+            ) as disponible
+        from
+            libro l
+        left join
+            categoria c on l.idcategoria = c.id
+        where
+            (%(t)s is null
+            or l.titulo ilike %(t0)s)
+            and (%(a)s is null
+            or l.autor ilike %(a0)s)
+            and (%(ap)s is null
+            or l.aniopublicacion = %(ap)s)
+            and (%(i)s is null
+            or l.isbn ilike %(i0)s)
+            and (%(ic)s is null
+            or l.idcategoria = %(ic)s) 
     """
 
     print("+--------------+")
@@ -165,11 +169,11 @@ def buscar_libros(conn):
     sautor = input("Autor: ")
     autor = None if sautor == "" else sautor
 
-    sanio_publicacion = input("Año de publicación: ")
+    sanio_publicacion = input("Anio de publicacion: ")
     try:
         anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
     except ValueError:
-        print("Error: El año de publicación debe ser un número entero.")
+        print("Error: El anio de publicacion debe ser un numero entero.")
         return
 
     sisbn = input("ISBN: ")
@@ -179,7 +183,7 @@ def buscar_libros(conn):
     try:
         id_categoria = None if sid_categoria == "" else int(sid_categoria)
     except ValueError:
-        print("Error: El id de categoría debe ser un número entero.")
+        print("Error: El id de categoria debe ser un numero entero.")
         return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
@@ -189,10 +193,10 @@ def buscar_libros(conn):
                 't0': f"%{titulo}%" if titulo is not None else None,
                 'a': autor,
                 'a0': f"%{autor}%" if autor is not None else None,
-                'aP': anio_publicacion,
+                'ap': anio_publicacion,
                 'i': isbn,
                 'i0': f"%{isbn}%" if isbn is not None else None,
-                'iC': id_categoria
+                'ic': id_categoria
             })
             
             libros = cur.fetchall()
@@ -207,10 +211,11 @@ def buscar_libros(conn):
                 print(f"ID: {libro['id']}")
                 print(f"Titulo: {libro['titulo']}")
                 print(f"Autor: {libro['autor']}")
-                print(f"Año de publicación: {libro['anioPublicacion']}")
+                print(f"Anio de publicacion: {libro['aniopublicacion']}")
                 print(f"ISBN: {libro['isbn']}")
-                print(f"Categoria: {libro['nombreCategoria']}")
-                print(f"Precio actual: {libro['precioActual'] if libro['precioActual'] is not None else 'Sin precio registrado'} €")
+                print(f"Categoria: {libro['nombrecategoria']}")
+                print(
+                    f"Precio actual: {libro['precioactual'] if libro['precioactual'] is not None else 'Sin precio registrado'} €")
                 print(f"Disponibilidad: {'Disponible' if libro['disponible'] else 'No disponible'}")
         
         except psycopg2.Error as e:
@@ -220,39 +225,39 @@ def buscar_libros(conn):
 # 3
 def consultar_libro(conn):
     """
-    Muestra toda la información disponible de un libro específico según su ID.
-    :param conn: La conexión activa con la base de datos
+    Muestra toda la informacion disponible de un libro especifico segun su ID.
+    :param conn: La conexion activa con la base de datos
     :return: None
     """
 
     sql_sentence = """
-        SELECT 
-            L.titulo,
-            L.autor,
-            L.anioPublicacion,
-            L.isbn,
-            L.sinopsis,
-            L.idCategoria,
-            C.nombre AS nombreCategoria,
+        select 
+            l.titulo,
+            l.autor,
+            l.aniopublicacion,
+            l.isbn,
+            l.sinopsis,
+            l.idcategoria,
+            c.nombre as nombrecategoria,
             (
-                SELECT precio
-                FROM PrecioLibro
-                WHERE idLibro = L.id
-                ORDER BY fecha DESC
-                LIMIT 1 
-            ) AS precioActual,
-            NOT EXISTS (
-                SELECT 1
-                FROM Prestamo P
-                WHERE P.idLibro = L.id
-                AND P.fechaDevolucion IS NULL
-            ) AS disponible
-        FROM 
-            Libro L
-        LEFT JOIN
-            Categoria C ON L.idCategoria = C.id
-        WHERE
-            L.id = %(i)s
+                select precio
+                from preciolibro
+                where idlibro = l.id
+                order by fecha desc
+                limit 1 
+            ) as precioactual,
+            not exists (
+                select 1
+                from prestamo p
+                where p.idlibro = l.id
+                and p.fechadevolucion is null
+            ) as disponible
+        from
+            libro l
+        left join
+            categoria c on l.idcategoria = c.id
+        where
+            l.id = %(i)s
     """
 
     print("+-----------------+")
@@ -263,7 +268,7 @@ def consultar_libro(conn):
     try:
         id_libro = int(sid_libro)
     except ValueError:
-        print("Error: El id del libro debe ser un número entero.")
+        print("Error: El id del libro debe ser un numero entero.")
         return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
@@ -281,12 +286,13 @@ def consultar_libro(conn):
             print(f"Id: {id_libro}")
             print(f"Titulo: {libro['titulo']}")
             print(f"Autor: {libro['autor']}")
-            print(f"Año de publicación: {libro['anioPublicacion']}")
+            print(f"Anio de publicacion: {libro['aniopublicacion']}")
             print(f"ISBN: {libro['isbn']}")
             print(f"Sinopsis: {libro['sinopsis']}")
-            print(f"Id de categoria: {libro['idCategoria']}")
-            print(f"Categoria: {libro['nombreCategoria']}")
-            print(f"Precio actual: {libro['precioActual'] if libro['precioActual'] is not None else 'Sin precio registrado'} €")
+            print(f"Id de categoria: {libro['idcategoria']}")
+            print(f"Categoria: {libro['nombrecategoria']}")
+            print(
+                f"Precio actual: {libro['precioactual'] if libro['precioactual'] is not None else 'Sin precio registrado'} €")
             print(f"Disponibilidad: {'Disponible' if libro['disponible'] else 'No disponible'}")
         
         except psycopg2.Error as e:
@@ -296,71 +302,71 @@ def consultar_libro(conn):
 # 4
 def modificar_libro(conn):
     """
-    Permite actualizar la información de un libro existente en la biblioteca.
-    :param conn: La conexión activa con la base de datos
+    Permite actualizar la informacion de un libro existente en la biblioteca.
+    :param conn: La conexion activa con la base de datos
     :return: None
     """
 
     conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
     sql_update_titulo = """
-        UPDATE 
-            Libro 
-        SET 
-            titulo = %(t)s 
-        WHERE 
+        update
+            libro
+        set 
+            titulo = %(t)s
+        where 
             id = %(i)s
     """
 
     sql_update_autor = """
-        UPDATE 
-            Libro 
-        SET 
-            autor = %(a)s 
-        WHERE 
+        update
+            libro
+        set 
+            autor = %(a)s
+        where 
             id = %(i)s
     """
 
     sql_update_anio_publicacion = """
-        UPDATE 
-            Libro 
-        SET 
-            anioPublicacion = %(aP)s 
-        WHERE 
+        update
+            libro
+        set     
+            aniopublicacion = %(aP)s
+        where 
             id = %(i)s
     """
 
     sql_update_isbn = """
-        UPDATE 
-            Libro 
-        SET 
-            isbn = %(isbn)s 
-        WHERE 
+        update
+            libro
+        set 
+            isbn = %(isbn)s
+        where 
             id = %(i)s
     """
 
     sql_update_sinopsis = """
-        UPDATE 
-            Libro 
-        SET 
-            sinopsis = %(s)s 
-        WHERE 
+        update
+            libro
+        set
+            sinopsis = %(s)s
+        where 
             id = %(i)s
     """
 
     sql_update_categoria = """
-        UPDATE
-            Libro
-        SET 
-            idCategoria = %(iC)s
-        WHERE 
+        update
+            libro
+        set 
+            idcategoria = %(iC)s
+        where 
             id = %(i)s
     """
 
     sql_update_precio = """
-        INSERT INTO 
-            PrecioLibro (idLibro, precio) 
-        VALUES 
+        insert into 
+            preciolibro (idlibro, precio)
+        values 
             (%(i)s, %(p)s) 
     """
 
@@ -372,12 +378,12 @@ def modificar_libro(conn):
     try:
         id_libro = int(sid_libro)
     except ValueError:
-        print("Error: El id del libro debe ser un número entero.")
+        print("Error: El id del libro debe ser un numero entero.")
         return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
-            if input("Modificar título? (s/n): ").strip().lower() == "s":
+            if input("Modificar titulo? (s/n): ").strip().lower() == "s":
                 stitulo = input("Nuevo titulo: ").strip()
                 titulo = None if stitulo == "" else stitulo
 
@@ -400,7 +406,7 @@ def modificar_libro(conn):
                 try:
                     anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
                 except ValueError:
-                    print("Error: El anio de publicacion debe ser un número entero.")
+                    print("Error: El anio de publicacion debe ser un numero entero.")
                     return
 
                 cur.execute(sql_update_anio_publicacion, {
@@ -472,15 +478,16 @@ def modificar_libro(conn):
 # 5
 def eliminar_libro(conn):
     """
-    Elimina permanentemente un libro de la biblioteca según su ID.
-    :param conn: La conexión activa con la base de datos
+    Elimina permanentemente un libro de la biblioteca segun su ID.
+    :param conn: La conexion activa con la base de datos
     :return: None
     """
 
     sql_sentence = """
-        DELETE FROM 
-            Libro 
-        WHERE 
+        delete
+        from 
+            libro
+        where 
             id = %(i)s
     """
 
@@ -492,7 +499,7 @@ def eliminar_libro(conn):
     try:
         id_libro = None if sid_libro == "" else int(sid_libro)
     except ValueError:
-        print("Error: El id del libro debe ser un número entero.")
+        print("Error: El id del libro debe ser un numero entero.")
         return
 
     with conn.cursor() as cur:
@@ -515,33 +522,33 @@ def eliminar_libro(conn):
 # 6
 def actualizar_precio(conn):
     """
-    Actualiza el precio de un libro, permitiendo especificar un nuevo valor o aplicar un porcentaje de variación.
-    :param conn: La conexión activa con la base de datos
+    Actualiza el precio de un libro, permitiendo especificar un nuevo valor o aplicar un porcentaje de variacion.
+    :param conn: La conexion activa con la base de datos
     :return: None
     """
 
     conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
     sql_aumento_manual = """
-        INSERT INTO 
-            PrecioLibro (idLibro, precio) 
-        VALUES 
+        insert into 
+            preciolibro (idlibro, precio)
+        values  
             (%(i)s, %(p)s)
     """
 
     sql_aumento_porcentaje = """
-        INSERT INTO 
-            PrecioLibro (idLibro, precio) 
-        SELECT 
+        insert into 
+            preciolibro (idlibro, precio)
+        select 
             %(i)s,
             precio * (1 + %(p)s / 100.0)
-        FROM 
-            PrecioLibro
-        WHERE 
-            idLibro = %(i)s
-        ORDER BY 
-            fecha DESC
-        LIMIT 
+        from 
+            preciolibro
+        where 
+            idlibro = %(i)s
+        order by 
+            fecha desc 
+        limit 
             1
     """
 
@@ -549,12 +556,11 @@ def actualizar_precio(conn):
     print("| Actualizar precio de libro |")
     print("+----------------------------+")
 
-
     sid_libro = input("Id del libro: ")
     try:
         id_libro = None if sid_libro == "" else int(sid_libro)
     except ValueError:
-        print("Error: El id del librodebe ser un número entero.")
+        print("Error: El id del librodebe ser un numero entero.")
         return
 
 
@@ -595,21 +601,21 @@ def actualizar_precio(conn):
 # 7
 def ver_historial_precios(conn):
     """
-    Muestra un listado cronológico de todos los precios que ha tenido un libro específico.
-    :param conn: La conexión activa con la base de datos
+    Muestra un listado cronologico de todos los precios que ha tenido un libro especifico.
+    :param conn: La conexion activa con la base de datos
     :return: None
     """
 
     sql_sentence = """
-        SELECT 
-            precio,
-            fecha
-        FROM 
-            PrecioLibro
-        WHERE   
-            idLibro = %(i)s
-        ORDER BY 
-            fecha DESC
+    select 
+        precio,
+        fecha
+    from 
+        preciolibro
+    where 
+        idlibro = %(i)s
+    order by 
+        fecha desc
     """
 
     print("+-----------------------------------+")
@@ -620,7 +626,7 @@ def ver_historial_precios(conn):
     try:
         id_libro = None if sid_libro == "" else int(sid_libro)
     except ValueError:
-        print("Error: El id del librodebe ser un número entero.")
+        print("Error: El id del librodebe ser un numero entero.")
         return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
@@ -643,18 +649,18 @@ def ver_historial_precios(conn):
             conn.rollback()
 
 # 8
-def añadir_categoria(conn):
+def anadir_categoria(conn):
     """
     Anade una categoria a la base de datos. Pide al usuario los datos necesarios.
-    :param conn: La conexión abierta a la BD
+    :param conn: La conexion abierta a la BD
     :return: Nada
     """
 
     sql_sentence = """
-       INSERT INTO 
-           Categoria (nombre, descripcion)
-       VALUES 
-           (%(n)s, %(d)s)
+        insert into 
+            categoria (nombre, descripcion)
+        values 
+            (%(n)s, %(d)s)
     """
 
     print("+------------------+")
@@ -664,7 +670,7 @@ def añadir_categoria(conn):
     snombre = input("Nombre: ")
     nombre = None if snombre == "" else snombre
 
-    sdescripcion = input("Descripción: ")
+    sdescripcion = input("Descripcion: ")
     descripcion = None if sdescripcion == "" else sdescripcion
 
     with conn.cursor() as cur:
@@ -675,11 +681,11 @@ def añadir_categoria(conn):
             })
 
             conn.commit()
-            print("Categoría añadida correctamente.")
+            print("Categoria anadida correctamente.")
 
         except psycopg2.Error as e:
             if e.pgcode == psycopg2.errorcodes.UNIQUE_VIOLATION:
-                print("Error: Una categoría con ese nombre ya existe.")
+                print("Error: Una categoria con ese nombre ya existe.")
             elif e.pgcode == psycopg2.errorcodes.NOT_NULL_VIOLATION:
                 if e.diag.column_name == "nombre":
                     print("Error: El nombre no puede ser nulo.")
@@ -698,27 +704,27 @@ def añadir_categoria(conn):
 def modificar_categoria(conn):
     """
     Modifica los atributos de una categoria en la base de datos. Pide al usuario el id de la categoria y los atributos a modificar.
-    :param conn: La conexión abierta a la BD
+    :param conn: La conexion abierta a la BD
     :return: Nada
     """
 
     conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
     sql_update_nombre = """
-        UPDATE 
-            Categoria 
-        SET 
+        update 
+            categoria 
+        set 
             nombre = %(n)s 
-        WHERE 
+        where 
             id = %(i)s
     """
 
     sql_update_descripcion = """
-        UPDATE 
-            Categoria  
-        SET 
+        update 
+            categoria  
+        set 
             descripcion = %(d)s 
-        WHERE 
+        where 
             id = %(i)s
     """
 
@@ -730,7 +736,7 @@ def modificar_categoria(conn):
     try:
         id_categoria = int(sid_categoria)
     except ValueError:
-        print("Error: El id de la categoria debe ser un número entero.")
+        print("Error: El id de la categoria debe ser un numero entero.")
         return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
@@ -772,14 +778,14 @@ def modificar_categoria(conn):
 def eliminar_categoria(conn):
     """
     Elimina una categoria de la base de datos. Pide al usuario el id de la categoria.
-    :param conn: La conexión abierta a la BD
+    :param conn: La conexion abierta a la BD
     :return: Nada
     """
 
     sql_sentence = """
-        DELETE FROM 
-            Categoria 
-        WHERE 
+        delete from
+            categoria 
+        where
             id = %(i)s
     """
 
@@ -791,7 +797,7 @@ def eliminar_categoria(conn):
     try:
         id_categoria = int(sid_categoria)
     except ValueError:
-        print("Error: El id de la categoria debe ser un número entero.")
+        print("Error: El id de la categoria debe ser un numero entero.")
         return
 
     with conn.cursor() as cur:
@@ -814,14 +820,14 @@ def eliminar_categoria(conn):
 # 11
 def efectuar_prestamo(conn):
     """
-    Añade un prestamo a la base de datos. Pide al usuario los datos necesarios.
-    :param conn: La conexión abierta a la BD
+    Anade un prestamo a la base de datos. Pide al usuario los datos necesarios.
+    :param conn: La conexion abierta a la BD
     :return: Nada
     """
 
     sql_sentence = """
-        INSERT INTO Prestamo (fechaPrestamo, comentarios, idLibro, idEstudiante)
-        VALUES (NOW(), %(c)s, %(iL)s, %(iE)s)
+        insert into prestamo (fechaprestamo, comentarios, idlibro, idestudiante)
+        values (now(), %(c)s, %(il)s, %(ie)s)
     """
 
     print("+-------------------+")
@@ -835,22 +841,22 @@ def efectuar_prestamo(conn):
     try:
         id_libro = None if sid_libro == "" else int(sid_libro)
     except ValueError:
-        print("Error: El id del libro debe ser un número entero.")
+        print("Error: El id del libro debe ser un numero entero.")
         return
 
     sid_estudiante = input("Id del estudiante: ").strip()
     try:
         id_estudiante = None if sid_estudiante == "" else int(sid_estudiante)
     except ValueError:
-        print("Error: El id del estudiante debe ser un número entero.")
+        print("Error: El id del estudiante debe ser un numero entero.")
         return
 
     with conn.cursor() as cur:
         try:
             cur.execute(sql_sentence, {
                 'c': comentarios,
-                'iL': id_libro,
-                'iE': id_estudiante,
+                'il': id_libro,
+                'ie': id_estudiante,
             })
 
             conn.commit()
@@ -872,25 +878,25 @@ def efectuar_prestamo(conn):
 def ver_historial_prestamos_libro(conn):
     """
     Muestra el historial de prestamos de un libro. Pide al usuario el id del libro.
-    :param conn: La conexión abierta a la BD
+    :param conn: La conexion abierta a la BD
     :return: Nada
     """
 
     sql_sentence = """
-        SELECT 
-            P.fechaPrestamo, 
-            P.fechaDevolucion, 
-            P.comentarios, 
-            P.idEstudiante,
-            E.nombre as nombreEstudiante
-        FROM 
-            Prestamo P
-        JOIN 
-            Estudiante E ON E.id = P.idEstudiante
-        WHERE   
-            P.idLibro = %(i)s
-        ORDER BY 
-            P.fechaPrestamo DESC
+        select 
+            p.fechaprestamo, 
+            p.fechadevolucion, 
+            p.comentarios, 
+            p.idestudiante,
+            e.nombre as nombreEstudiante
+        from 
+            prestamo p
+        join 
+            estudiante e on e.id = p.idestudiante
+        where   
+            p.idlibro = %(i)s
+        order by 
+            p.fechaprestamo desc
     """
 
     print("+-------------------------------------+")
@@ -901,7 +907,7 @@ def ver_historial_prestamos_libro(conn):
     try:
         id_libro = None if sid_libro == "" else int(sid_libro)
     except ValueError:
-        print("Error: El id del libro debe ser un número entero.")
+        print("Error: El id del libro debe ser un numero entero.")
         return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
@@ -931,25 +937,25 @@ def ver_historial_prestamos_libro(conn):
 def ver_historial_prestamos_estudiante(conn):
     """
     Muestra el historial de prestamos de un estudiante. Pide al usuario el id del estudiante.
-    :param conn: La conexión abierta a la BD
+    :param conn: La conexion abierta a la BD
     :return: Nada
     """
 
     sql_sentence = """
-        SELECT 
-            P.fechaPrestamo, 
-            P.fechaDevolucion, 
-            P.comentarios, 
-            P.idLibro,
-            L.titulo as nombreLibro
-        FROM 
-            Prestamo P
-        JOIN 
-            Libro L ON L.id = P.idLibro
-        WHERE   
-            P.idEstudiante = %(i)s
-        ORDER BY 
-            P.fechaPrestamo DESC
+        select 
+            p.fechaprestamo, 
+            p.fechadevolucion, 
+            p.comentarios, 
+            p.idlibro,
+            l.titulo as nombrelibro
+        from 
+            prestamo p
+        join 
+            libro l on l.id = p.idlibro
+        where   
+            p.idestudiante = %(i)s
+        order by 
+            p.fechaprestamo desc
     """
 
     print("+------------------------------------------+")
@@ -960,7 +966,7 @@ def ver_historial_prestamos_estudiante(conn):
     try:
         id_estudiante = None if sid_estudiante == "" else int(sid_estudiante)
     except ValueError:
-        print("Error: El id del estudiante debe ser un número entero.")
+        print("Error: El id del estudiante debe ser un numero entero.")
         return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
@@ -976,11 +982,11 @@ def ver_historial_prestamos_estudiante(conn):
                 return
 
             for prestamo in prestamos:
-                print(f"Fecha de prestamo: {prestamo['fechaPrestamo'].date()}")
-                print(f"Fecha de devolucion: {prestamo['fechaDevolucion'].date() if prestamo['fechaDevolucion'] else 'No devuelto'}")
+                print(f"Fecha de prestamo: {prestamo['fechaprestamo'].date()}")
+                print(f"Fecha de devolucion: {prestamo['fechadevolucion'].date() if prestamo['fechadevolucion'] else 'No devuelto'}")
                 print(f"Comentarios: {prestamo['comentarios']}")
-                print(f"Id del libro: {prestamo['idLibro']}")
-                print(f"Libro: {prestamo['nombreLibro']}")
+                print(f"Id del libro: {prestamo['idlibro']}")
+                print(f"Libro: {prestamo['nombrelibro']}")
 
         except psycopg2.Error as e:
             print_generic_error(e)
@@ -990,27 +996,27 @@ def ver_historial_prestamos_estudiante(conn):
 def consultar_prestamo(conn):
     """
     Consulta un prestamo en la base de datos. Pide al usuario el id del prestamo.
-    :param conn: La conexión abierta a la BD
+    :param conn: La conexion abierta a la BD
     :return: Nada
     """
 
     sql_sentence = """
-        SELECT 
-            P.fechaPrestamo, 
-            P.fechaDevolucion, 
-            P.comentarios, 
-            P.idLibro,
-            L.titulo AS nombreLibro,
-            P.idEstudiante,
-            E.nombre AS nombreEstudiante
-        FROM 
-            Prestamo P
-        JOIN 
-            Libro L ON L.id = P.idLibro
-        JOIN 
-            Estudiante E ON E.id = P.idEstudiante
-        WHERE 
-            P.id = %(i)s
+        select 
+            p.fechaprestamo, 
+            p.fechadevolucion, 
+            p.comentarios, 
+            p.idlibro,
+            l.titulo as nombrelibro,
+            p.idestudiante,
+            e.nombre as nombreestudiante
+        from 
+            prestamo p
+        join 
+            libro l on l.id = p.idlibro
+        join 
+            estudiante e on e.id = p.idestudiante
+        where 
+            p.id = %(i)s
     """
 
     print("+--------------------+")
@@ -1021,7 +1027,7 @@ def consultar_prestamo(conn):
     try:
         id_prestamo = int(sid_prestamo)
     except ValueError:
-        print("Error: El id del prestamo debe ser un número entero.")
+        print("Error: El id del prestamo debe ser un numero entero.")
         return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
@@ -1037,13 +1043,14 @@ def consultar_prestamo(conn):
                 return
 
             print(f"Id: {id_prestamo}")
-            print(f"Fecha del prestamo: {prestamo['fechaPrestamo'].date()}")
-            print(f"Fecha de devolucion: {prestamo['fechaDevolucion'].date() if prestamo['fechaDevolucion'] else 'No devuelto'}")
+            print(f"Fecha del prestamo: {prestamo['fechaprestamo'].date()}")
+            print(
+                f"Fecha de devolucion: {prestamo['fechadevolucion'].date() if prestamo['fechadevolucion'] else 'No devuelto'}")
             print(f"Comentarios: {prestamo['comentarios']}")
-            print(f"Id del libro: {prestamo['idLibro']}")
-            print(f"Libro: {prestamo['nombreLibro']}")
-            print(f"Id del estudiante: {prestamo['idEstudiante']}")
-            print(f"Estudiante: {prestamo['nombreEstudiante']}")
+            print(f"Id del libro: {prestamo['idlibro']}")
+            print(f"Libro: {prestamo['nombrelibro']}")
+            print(f"Id del estudiante: {prestamo['idestudiante']}")
+            print(f"Estudiante: {prestamo['nombreestudiante']}")
 
         except psycopg2.Error as e:
             print_generic_error(e)
@@ -1053,18 +1060,18 @@ def consultar_prestamo(conn):
 def finalizar_prestamo(conn):
     """
     Finaliza un prestamo en la base de datos. Pide al usuario el id del prestamo.
-    :param conn: La conexión abierta a la BD
+    :param conn: La conexion abierta a la BD
     :return: Nada
     """
 
     conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
     sql_sentence = """
-        UPDATE 
-            Prestamo
-        SET
-            fechaDevolucion = NOW()
-        WHERE
+        update 
+            prestamo
+        set
+            fechadevolucion = now()
+        where
             id = %(i)s
     """
 
@@ -1076,7 +1083,7 @@ def finalizar_prestamo(conn):
     try:
         id_prestamo = int(sid_prestamo)
     except ValueError:
-        print("Error: El id del prestamo debe ser un número entero.")
+        print("Error: El id del prestamo debe ser un numero entero.")
         return
 
     with conn.cursor() as cur:
@@ -1086,7 +1093,7 @@ def finalizar_prestamo(conn):
             })
 
             if cur.rowcount == 0:
-                print("No se ha encontrado el préstamo.")
+                print("No se ha encontrado el prestamo.")
                 conn.rollback()
                 return
 
@@ -1101,14 +1108,14 @@ def finalizar_prestamo(conn):
 def eliminar_prestamo(conn):
     """
     Elimina un prestamo de la base de datos. Pide al usuario el id del prestamo.
-    :param conn: La conexión abierta a la BD
+    :param conn: La conexion abierta a la BD
     :return: Nada
     """
 
     sql_sentence = """
-        DELETE FROM 
-            Prestamo 
-        WHERE 
+        delete from
+            prestamo 
+        where 
             id = %(i)s
     """
 
@@ -1120,7 +1127,7 @@ def eliminar_prestamo(conn):
     try:
         id_prestamo = None if sid_prestamo == "" else int(sid_prestamo)
     except ValueError:
-        print("Error: El id del prestamo debe ser un número entero.")
+        print("Error: El id del prestamo debe ser un numero entero.")
         return
 
     with conn.cursor() as cur:
@@ -1143,18 +1150,18 @@ def eliminar_prestamo(conn):
 # 17
 def anadir_estudiante(conn):
     """
-    Añade un estudiante a la base de datos. Pide al usuario los datos necesarios.
-    :param conn: La conexión abierta a la BD
+    Anade un estudiante a la base de datos. Pide al usuario los datos necesarios.
+    :param conn: La conexion abierta a la BD
     :return: Nada
     """
 
     sql_sentence = """
-       INSERT INTO Estudiante (nombre, apellidos, curso, email, telefono)
-       VALUES (%(n)s, %(a)s, %(c)s, %(e)s, %(t)s)
+        insert into estudiante (nombre, apellidos, curso, email, telefono)
+        values (%(n)s, %(a)s, %(c)s, %(e)s, %(t)s)
     """
 
     print("+-------------------+")
-    print("| Añadir estudiante |")
+    print("| Anadir estudiante |")
     print("+-------------------+")
 
     snombre = input("Nombre: ").strip()
@@ -1167,7 +1174,7 @@ def anadir_estudiante(conn):
     try:
         curso = None if scurso == "" else int(scurso)
     except ValueError:
-        print("Error: El curso debe ser un número entero.")
+        print("Error: El curso debe ser un numero entero.")
         return
 
     semail = input("Email: ").strip()
@@ -1187,7 +1194,7 @@ def anadir_estudiante(conn):
             })
 
             conn.commit()
-            print("Estudiante añadido correctamente.")
+            print("Estudiante anadido correctamente.")
 
         except psycopg2.Error as e:
             if e.pgcode == psycopg2.errorcodes.UNIQUE_VIOLATION:
@@ -1221,27 +1228,27 @@ def anadir_estudiante(conn):
 def consultar_estudiante(conn):
     """
     Consulta un estudiante en la base de datos. Pide al usuario el id del estudiante.
-    :param conn: La conexión abierta a la BD
+    :param conn: La conexion abierta a la BD
     :return: Nada
     """
 
     sql_sentence = """
-        SELECT 
-            E.nombre,
-            E.apellidos,
-            E.curso,
-            E.email,
-            E.telefono,
+        select 
+            e.nombre,
+            e.apellidos,
+            e.curso,
+            e.email,
+            e.telefono,
             (
-                SELECT count(*) 
-                FROM Prestamo P 
-                WHERE P.idEstudiante = E.id
-                AND P.fechaDevolucion IS NULL
-            ) as librosEnPosesion
-        FROM
-            Estudiante E
-        WHERE
-             E.id = %(i)s
+                select count(*) 
+                from prestamo p 
+                where p.idestudiante = e.id
+                and p.fechadevolucion is null
+            ) as librosenposesion
+        from
+            estudiante e
+        where
+             e.id = %(i)s
     """
 
     print("+----------------------+")
@@ -1252,7 +1259,7 @@ def consultar_estudiante(conn):
     try:
         id_estudiante = int(sid_estudiante)
     except ValueError:
-        print("Error: El id del estudiante debe ser un número entero.")
+        print("Error: El id del estudiante debe ser un numero entero.")
         return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
@@ -1273,7 +1280,7 @@ def consultar_estudiante(conn):
             print(f"Curso: {estudiante['curso']}")
             print(f"Email: {estudiante['email']}")
             print(f"Telefono: {estudiante['telefono']}")
-            print(f"Libros en posesion: {estudiante['librosEnPosesion']}")
+            print(f"Libros en posesion: {estudiante['librosenposesion']}")
 
         except psycopg2.Error as e:
             print_generic_error(e)
@@ -1283,18 +1290,18 @@ def consultar_estudiante(conn):
 def aumentar_curso(conn):
     """
     Aumenta el curso de uno o varios estudiantes. Pide al usuario los datos necesarios.
-    :param conn: La conexión abierta a la BD
+    :param conn: La conexion abierta a la BD
     :return: Nada
     """
 
     conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
     sql_sentence = """
-        UPDATE
-            Estudiante
-        SET 
+        update
+            estudiante
+        set 
             curso = curso + 1
-        WHERE 
+        where 
             id = %(i)s
     """
 
@@ -1312,7 +1319,7 @@ def aumentar_curso(conn):
         try:
             id_estudiantes.append(int(sid_estudiante))
         except ValueError:
-            print("El id del estudiante debe ser un número entero.")
+            print("El id del estudiante debe ser un numero entero.")
             continue
 
     with conn.cursor() as cur:
@@ -1340,54 +1347,54 @@ def aumentar_curso(conn):
 def modificar_estudiante(conn):
     """
     Modifica los atributos de un estudiante en la base de datos. Pide al usuario el id del estudiante y los atributos a modificar.
-    :param conn: La conexión abierta a la BD
+    :param conn: La conexion abierta a la BD
     :return: Nada
     """
 
     conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
     sql_update_nombre = """
-        UPDATE 
-            Estudiante 
-        SET 
+        update 
+            estudiante 
+        set 
             nombre = %(n)s 
-        WHERE 
+        where 
             id = %(i)s
     """
 
     sql_update_apellidos = """
-        UPDATE 
-            Estudiante 
-        SET 
+        update 
+            estudiante 
+        set 
             apellidos = %(a)s 
-        WHERE 
+        where 
             id = %(i)s
     """
 
     sql_update_curso = """
-        UPDATE 
-            Estudiante 
-        SET 
+        update 
+            estudiante 
+        set 
             curso = %(c)s 
-        WHERE 
+        where 
             id = %(i)s
     """
 
     sql_update_email = """
-        UPDATE 
-            Estudiante 
-        SET 
+        update 
+            estudiante 
+        set 
             email = %(e)s 
-        WHERE 
+        where 
             id = %(i)s
     """
 
     sql_update_telefono = """
-        UPDATE 
-            Estudiante  
-        SET 
+        update 
+            estudiante  
+        set 
             telefono = %(t)s 
-        WHERE 
+        where 
             id = %(i)s
     """
 
@@ -1399,7 +1406,7 @@ def modificar_estudiante(conn):
     try:
         id_estudiante = int(sid_estudiante)
     except ValueError:
-        print("Error: El id del estudiante debe ser un número entero.")
+        print("Error: El id del estudiante debe ser un numero entero.")
         return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
@@ -1427,7 +1434,7 @@ def modificar_estudiante(conn):
                 try:
                     curso = None if scurso == "" else int(scurso)
                 except ValueError:
-                    print("Error: El curso debe ser un número entero.")
+                    print("Error: El curso debe ser un numero entero.")
                     return
 
                 cur.execute(sql_update_curso, {
@@ -1484,15 +1491,14 @@ def modificar_estudiante(conn):
 def eliminar_estudiante(conn):
     """
     Elimina un estudiante de la base de datos. Pide al usuario el id del estudiante.
-    :param conn: La conexión abierta a la BD
+    :param conn: La conexion abierta a la BD
     :return: Nada
     """
 
     sql_sentence = """
-        DELETE FROM 
-            Estudiante  
-        WHERE 
-            id = %(i)s
+        delete
+        from estudiante
+        where id = %(i)s
     """
 
     print("+---------------------+")
@@ -1503,7 +1509,7 @@ def eliminar_estudiante(conn):
     try:
         id_estudiante = int(sid_estudiante)
     except ValueError:
-        print("Error: El id del estudiante debe ser un número entero.")
+        print("Error: El id del estudiante debe ser un numero entero.")
         return
 
     with conn.cursor() as cur:
@@ -1526,13 +1532,13 @@ def eliminar_estudiante(conn):
 
 def menu(conn):
     """
-    Imprime un menú de opciones, solicita la opción y ejecuta la función asociada.
+    Imprime un menu de opciones, solicita la opcion y ejecuta la funcion asociada.
     'q' para salir.
     """
 
     menu_text = """
                 +------+
-                | MENÚ |
+                | MENU |
                 +------+
               
         [LIBROS]
@@ -1589,7 +1595,7 @@ def menu(conn):
         elif tecla == '7':
             ver_historial_precios(conn)
         elif tecla == '8':
-            añadir_categoria(conn)
+            anadir_categoria(conn)
         elif tecla == '9':
             modificar_categoria(conn)
         elif tecla == '10':

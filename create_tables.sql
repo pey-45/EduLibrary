@@ -1,6 +1,6 @@
-DROP TABLE Prestamo, Libro, Estudiante, Categoria CASCADE;
+DROP TABLE prestamo, libro, estudiante, categoria CASCADE;
 
-CREATE TABLE Categoria (
+CREATE TABLE categoria (
     id BIGSERIAL,
     nombre VARCHAR(100) NOT NULL,
     descripcion VARCHAR(255) NOT NULL,
@@ -8,7 +8,7 @@ CREATE TABLE Categoria (
     CONSTRAINT CategoriaNombreUQ UNIQUE (nombre)
 );
 
-CREATE TABLE Estudiante (
+CREATE TABLE estudiante (
     id BIGSERIAL,
     nombre VARCHAR(100) NOT NULL,
     apellidos VARCHAR(100) NOT NULL,
@@ -20,46 +20,46 @@ CREATE TABLE Estudiante (
     CONSTRAINT EstudianteTelefonoUQ UNIQUE (telefono)
 );
 
-CREATE TABLE Libro (
+CREATE TABLE libro (
     id BIGSERIAL,
     titulo VARCHAR(200) NOT NULL,
     autor VARCHAR(150),
-    anioPublicacion SMALLINT,
+    aniopublicacion SMALLINT,
     isbn VARCHAR(20),
     sinopsis TEXT,
-    idCategoria BIGINT,
+    idcategoria BIGINT,
     CONSTRAINT LibroPK PRIMARY KEY (id),
     CONSTRAINT LibroISBNUQ UNIQUE (isbn),
-    CONSTRAINT LibroCategoriaFK FOREIGN KEY (idCategoria)
-        REFERENCES Categoria(id)
+    CONSTRAINT LibroCategoriaFK FOREIGN KEY (idcategoria)
+        REFERENCES categoria(id)
         ON DELETE SET NULL
         ON UPDATE CASCADE
 );
 
-CREATE TABLE PrecioLibro (
+CREATE TABLE preciolibro (
     id BIGSERIAL,
     precio FLOAT NOT NULL,
     fecha TIMESTAMP NOT NULL,
-    idLibro BIGINT NOT NULL
-        REFERENCES Libro(id)
+    idlibro BIGINT NOT NULL
+        REFERENCES libro(id)
         ON DELETE CASCADE
         ON UPDATE CASCADE
 );
 
-CREATE TABLE Prestamo (
+CREATE TABLE prestamo (
     id BIGSERIAL,
-    fechaPrestamo TIMESTAMP NOT NULL,
-    fechaDevolucion TIMESTAMP,
+    fechaprestamo TIMESTAMP NOT NULL,
+    fechadevolucion TIMESTAMP,
     comentarios TEXT,
-    idLibro BIGINT,
-    idEstudiante BIGINT,
+    idlibro BIGINT,
+    idestudiante BIGINT,
     CONSTRAINT PrestamoPK PRIMARY KEY (id),
-    CONSTRAINT PrestamoLibroFK FOREIGN KEY (idLibro)
-        REFERENCES Libro(id)
+    CONSTRAINT PrestamoLibroFK FOREIGN KEY (idlibro)
+        REFERENCES libro(id)
         ON DELETE SET NULL
         ON UPDATE CASCADE,
-    CONSTRAINT PrestamoEstudianteFK FOREIGN KEY (idEstudiante)
-        REFERENCES Estudiante(id)
+    CONSTRAINT PrestamoEstudianteFK FOREIGN KEY (idestudiante)
+        REFERENCES estudiante(id)
         ON DELETE SET NULL
         ON UPDATE CASCADE
 );
