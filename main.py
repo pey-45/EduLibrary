@@ -16,7 +16,7 @@ def connect_db():
         conn = psycopg2.connect("")
         conn.autocommit = False
         return conn
-     except psycopg2.Error as e:
+     except psycopg2.Error:
          print("Error de conexión")
          sys.exit(1)
          
@@ -310,37 +310,6 @@ def modificar_libro(conn):
 
     conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
-    sql_sentence = """
-        SELECT 
-            L.id,
-            L.titulo,
-            L.autor,
-            L.anioPublicacion,
-            L.isbn,
-            L.sinopsis,
-            L.idCategoria,
-            C.nombre AS nombreCategoria,
-            (
-                SELECT precio
-                FROM PrecioLibro
-                WHERE idLibro = L.id
-                ORDER BY fecha DESC
-                LIMIT 1 
-            ) AS precioActual,
-            NOT EXISTS (
-                SELECT 1
-                FROM Prestamo P
-                WHERE P.idLibro = L.id
-                AND P.fechaDevolucion IS NULL
-            ) AS disponible
-        FROM
-            Libro L
-        LEFT JOIN
-            Categoria C ON L.idCategoria = C.id
-        WHERE 
-            %(i)s = L.id
-    """
-
     sql_update_titulo = """
         UPDATE 
             Libro 
@@ -497,5 +466,46 @@ def modificar_libro(conn):
                     print(f"Error: Libro especificado no existe.")
             elif e.pgcode == psycopg2.errorcodes.NUMERIC_VALUE_OUT_OF_RANGE:
                 print(f"Error: el precio es demasiado alto.")
+            conn.rollback()
 
+
+def eliminar_libro(conn):
+    """
+    Elimina un libro de la base de datos. Pide al usuario el id del libro.
+    :param conn: La conexión abierta a la BD
+    :return: Nada
+    """
+
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
+
+    sql_sentence = """
+        DELETE FROM 
+            Libro 
+        WHERE 
+            id = %(i)s
+        """
+
+    print("+----------------+")
+    print("| Eliminar libro |")
+    print("+----------------+")
+
+    sid_libro = input("Id del libro: ")
+    id_libro = None if sid_libro == "" else int(sid_libro)
+
+    with conn.cursor() as cur:
+        try:
+            cur.execute(sql_sentence, {
+                'i': id_libro
+            })
+
+            conn.commit()
+
+            if cur.rowcount == 0:
+                print(f"El libro con id {id_libro} no existe.")
+            else:
+                print("Libro eliminado correctamente.")
+
+        except psycopg2.Error as e:
+            print_generic_error(e)
+            conn.rollback()
 
