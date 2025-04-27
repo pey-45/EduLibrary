@@ -3,7 +3,6 @@ LIBRO
 - [POST] añadir libro
 - [GET] buscar libros filtrando por sus datos
 - [GET] consultar información de libro (con nombre de categoría, disponibilidad y precio)
-- [PUT] reasignar categoría
 - [PUT] modificar libro manualmente
 - [DELETE] eliminar libro
 

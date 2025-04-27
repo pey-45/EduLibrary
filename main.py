@@ -51,38 +51,39 @@ def anadir_libro(conn):
             (%(t)s, %(a)s, %(aP)s, %(i)s, %(s)s, %(iC)s)
     """
 
+
+    print("+--------------+")
+    print("| Añadir libro |")
+    print("+--------------+")
+
+    stitulo = input("Titulo: ")
+    titulo = None if stitulo == "" else stitulo
+
+    sautor = input("Autor: ")
+    autor = None if sautor == "" else sautor
+
+    sanio_publicacion = input("Año de publicación: ")
+    try:
+        anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
+    except ValueError:
+        print("Error: El año de publicación debe ser un número entero.")
+        return
+
+    sisbn = input("ISBN: ")
+    isbn = None if sisbn == "" else sisbn
+
+    ssinopsis = input("Sinopsis: ")
+    sinopsis = None if ssinopsis == "" else ssinopsis
+
+    sid_categoria = input("Id de categoria: ")
+    try:
+        id_categoria = None if sid_categoria == "" else int(sid_categoria)
+    except ValueError:
+        print("Error: El id de categoría debe ser un número entero.")
+        return
+
     with conn.cursor() as cur:
         try:
-            print("+--------------+")
-            print("| Añadir libro |")
-            print("+--------------+")
-            
-            stitulo = input("Titulo: ")
-            titulo = None if stitulo == "" else stitulo 
-            
-            sautor = input("Autor: ")
-            autor = None if sautor == "" else sautor
-            
-            sanio_publicacion = input("Año de publicación: ")
-            try:
-                anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
-            except ValueError:
-                print("Error: El año de publicación debe ser un número entero.")
-                return
-
-            sisbn = input("ISBN: ")
-            isbn = None if sisbn == "" else sisbn
-            
-            ssinopsis = input("Sinopsis: ")
-            sinopsis = None if ssinopsis == "" else ssinopsis
-        
-            sid_categoria = input("Id de categoria: ")
-            try:
-                id_categoria = None if sid_categoria == "" else int(sid_categoria)
-            except ValueError:
-                print("Error: El id de categoría debe ser un número entero.")
-                return
-            
             cur.execute(sql_sentence, {
                 't': titulo,
                 'a': autor,
@@ -153,51 +154,49 @@ def buscar_libros(conn):
         WHERE 
             (%(t)s IS NULL OR L.titulo ILIKE %(t0)s)
             AND (%(a)s IS NULL OR L.autor ILIKE %(a0)s)
-            AND (%(aP)s IS NULL OR L.anioPublicacion = %(aP0)s)
+            AND (%(aP)s IS NULL OR L.anioPublicacion = %(aP)s)
             AND (%(i)s IS NULL OR L.isbn ILIKE %(i0)s)
-            AND (%(iC)s IS NULL OR L.idCategoria = %(iC0)s)
+            AND (%(iC)s IS NULL OR L.idCategoria = %(iC)s)
     """
+
+    print("+--------------+")
+    print("| Buscar libro |")
+    print("+--------------+")
+
+    stitulo = input("Titulo: ")
+    titulo = None if stitulo == "" else stitulo
+
+    sautor = input("Autor: ")
+    autor = None if sautor == "" else sautor
+
+    sanio_publicacion = input("Año de publicación: ")
+    try:
+        anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
+    except ValueError:
+        print("Error: El año de publicación debe ser un número entero.")
+        return
+
+    sisbn = input("ISBN: ")
+    isbn = None if sisbn == "" else sisbn
+
+    sid_categoria = input("Id de categoria: ")
+    try:
+        id_categoria = None if sid_categoria == "" else int(sid_categoria)
+    except ValueError:
+        print("Error: El id de categoría debe ser un número entero.")
+        return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
-            print("+--------------+")
-            print("| Buscar libro |")
-            print("+--------------+")
-            
-            stitulo = input("Titulo: ")
-            titulo = None if stitulo == "" else stitulo 
-            
-            sautor = input("Autor: ")
-            autor = None if sautor == "" else sautor
-            
-            sanio_publicacion = input("Año de publicación: ")
-            try:
-                anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
-            except ValueError:
-                print("Error: El año de publicación debe ser un número entero.")
-                return
-            
-            sisbn = input("ISBN: ")
-            isbn = None if sisbn == "" else sisbn
-        
-            sid_categoria = input("Id de categoria: ")
-            try:
-                id_categoria = None if sid_categoria == "" else int(sid_categoria)
-            except ValueError:
-                print("Error: El id de categoría debe ser un número entero.")
-                return
-            
             cur.execute(sql_sentence,{
                 't': titulo,
                 't0': f"%{titulo}%" if titulo is not None else None,
                 'a': autor,
                 'a0': f"%{autor}%" if autor is not None else None,
                 'aP': anio_publicacion,
-                'aP0': anio_publicacion,
                 'i': isbn,
                 'i0': f"%{isbn}%" if isbn is not None else None,
-                'iC': id_categoria,
-                'iC0': id_categoria
+                'iC': id_categoria
             })
             
             libros = cur.fetchall()
@@ -263,19 +262,19 @@ def consultar_libro(conn):
             %(i)s = L.id
     """
 
+    print("+-----------------+")
+    print("| Consultar libro |")
+    print("+-----------------+")
+
+    sid_libro = input("Id del libro: ")
+    try:
+        id_libro = int(sid_libro)
+    except ValueError:
+        print("Error: El id del libro debe ser un número entero.")
+        return
+
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
-            print("+-----------------+")
-            print("| Consultar libro |")
-            print("+-----------------+")
-            
-            sid_libro = input("Id del libro: ")
-            try:
-                id_libro = int(sid_libro)
-            except ValueError:
-                print("Error: El id del libro debe ser un número entero.")
-                return
-            
             cur.execute(sql_sentence, {
                 'i': id_libro
             })
@@ -300,5 +299,203 @@ def consultar_libro(conn):
         except psycopg2.Error as e:
             print_generic_error(e)
             conn.rollback()
-            
+
+
+def modificar_libro(conn):
+    """
+    Modifica los atributos de un libro en la base de datos. Pide al usuario el id del libro y los atributos a modificar.
+    :param conn: La conexión abierta a la BD
+    :return: Nada
+    """
+
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
+
+    sql_sentence = """
+        SELECT 
+            L.id,
+            L.titulo,
+            L.autor,
+            L.anioPublicacion,
+            L.isbn,
+            L.sinopsis,
+            L.idCategoria,
+            C.nombre AS nombreCategoria,
+            (
+                SELECT precio
+                FROM PrecioLibro
+                WHERE idLibro = L.id
+                ORDER BY fecha DESC
+                LIMIT 1 
+            ) AS precioActual,
+            NOT EXISTS (
+                SELECT 1
+                FROM Prestamo P
+                WHERE P.idLibro = L.id
+                AND P.fechaDevolucion IS NULL
+            ) AS disponible
+        FROM
+            Libro L
+        LEFT JOIN
+            Categoria C ON L.idCategoria = C.id
+        WHERE 
+            %(i)s = L.id
+    """
+
+    sql_update_titulo = """
+        UPDATE 
+            Libro 
+        SET 
+            titulo = %(t)s 
+        WHERE 
+            id = %(i)s
+    """
+
+    sql_update_autor = """
+        UPDATE 
+            Libro 
+        SET 
+            autor = %(a)s 
+        WHERE 
+            id = %(i)s
+    """
+
+    sql_update_anio_publicacion = """
+        UPDATE 
+            Libro 
+        SET 
+            anioPublicacion = %(aP)s 
+        WHERE 
+            id = %(i)s
+    """
+
+    sql_update_isbn = """
+        UPDATE 
+            Libro 
+        SET 
+            isbn = %(isbn)s 
+        WHERE 
+            id = %(i)s
+    """
+
+    sql_update_sinopsis = """
+        UPDATE 
+            Libro 
+        SET 
+            sinopsis = %(s)s 
+        WHERE 
+            id = %(i)s
+    """
+
+    sql_update_categoria = """
+        UPDATE
+            Libro
+        SET 
+            idCategoria = %(iC)s
+        WHERE 
+            id = %(i)s
+    """
+
+    sql_update_precio = """
+        INSERT INTO 
+            PrecioLibro (idLibro, precio) 
+        VALUES 
+            (%(i)s, %(p)s) 
+    """
+
+    print("+-----------------+")
+    print("| Modificar libro |")
+    print("+-----------------+")
+
+    sid_libro = input("Id del libro: ")
+    try:
+        id_libro = int(sid_libro)
+    except ValueError:
+        print("Error: El id del libro debe ser un número entero.")
+        return
+
+    with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+        try:
+            if input("Modificar título? (s/n): ").lower() == "s":
+                stitulo = input("Nuevo titulo: ")
+                titulo = None if stitulo == "" else stitulo
+
+                cur.execute(sql_update_titulo, {
+                    't': titulo,
+                    'i': id_libro
+                })
+
+            if input("Modificar autor? (s/n): ").lower() == "s":
+                sautor = input("Nuevo autor: ")
+                autor = None if sautor == "" else sautor
+
+                cur.execute(sql_update_autor, {
+                    'a': autor,
+                    'i': id_libro
+                })
+
+            if input("Modificar año de publicacion? (s/n):").lower() == "s":
+                sanio_publicacion = input("Nuevo año de publicacion: ")
+                anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
+
+                cur.execute(sql_update_anio_publicacion, {
+                    'aP': anio_publicacion,
+                    'i': id_libro
+                })
+
+            if input("Modificar ISBN? (s/n): ").lower() == "s":
+                sisbn = input("Nuevo ISBN: ")
+                isbn = None if sisbn == "" else sisbn
+
+                cur.execute(sql_update_isbn, {
+                    'isbn': isbn,
+                    'i': id_libro
+                })
+
+            if input("Modificar sinopsis? (s/n): ").lower() == "s":
+                ssinopsis = input("Nuevo sinopsis: ")
+                sinopsis = None if ssinopsis == "" else ssinopsis
+
+                cur.execute(sql_update_sinopsis, {
+                    's': sinopsis,
+                    'i': id_libro
+                })
+
+            if input("Modificar categoria? (s/n): ").lower() == "s":
+                sid_categoria = input("Nuevo id de categoria: ")
+                id_categoria = None if sid_categoria == "" else int(sid_categoria)
+
+                cur.execute(sql_update_categoria, {
+                    'iC': id_categoria,
+                    'i': id_libro
+                })
+
+            if input("Modificar precio? (s/n): ").lower() == "s":
+                sprecio = input("Nuevo precio: ")
+                precio = None if sprecio == "" else float(sprecio)
+
+                cur.execute(sql_update_precio, {
+                    'i': id_libro,
+                    'p': precio
+                })
+
+        except psycopg2.Error as e:
+            if e.pgcode == psycopg2.errorcodes.NOT_NULL_VIOLATION:
+                print("Error: El titulo no puede ser nulo.")
+            elif e.pgcode == psycopg2.errorcodes.STRING_DATA_RIGHT_TRUNCATION:
+                if e.diag.column_name == "titulo":
+                    print("Error: El titulo es demasiado largo.")
+                elif e.diag.column_name == "autor":
+                    print("Error: El nombre de autor es demasiado largo.")
+                elif e.diag.column_name == "isbn":
+                    print("Error: El ISBN es demasiado largo.")
+                elif e.diag.column_name == "sinopsis":
+                    print("Error: La sinopsis es demasiado larga.")
+            elif e.pgcode == psycopg2.errorcodes.FOREIGN_KEY_VIOLATION:
+                if e.diag.column_name == "idCategoria":
+                    print(f"Error: Categoria especificada no existe.")
+                elif e.diag.column_name == "idLibro":
+                    print(f"Error: Libro especificado no existe.")
+            elif e.pgcode == psycopg2.errorcodes.NUMERIC_VALUE_OUT_OF_RANGE:
+                print(f"Error: el precio es demasiado alto.")
+
 
