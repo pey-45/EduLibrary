@@ -404,7 +404,11 @@ def modificar_libro(conn):
 
             if input("Modificar año de publicacion? (s/n):").strip().lower() == "s":
                 sanio_publicacion = input("Nuevo año de publicacion: ").strip()
-                anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
+                try:
+                    anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
+                except ValueError:
+                    print("Error: El curso debe ser un número entero.")
+                    return
 
                 cur.execute(sql_update_anio_publicacion, {
                     'aP': anio_publicacion,
@@ -421,7 +425,7 @@ def modificar_libro(conn):
                 })
 
             if input("Modificar sinopsis? (s/n): ").strip().lower() == "s":
-                ssinopsis = input("Nuevo sinopsis: ").strip()
+                ssinopsis = input("Nueva sinopsis: ").strip()
                 sinopsis = None if ssinopsis == "" else ssinopsis
 
                 cur.execute(sql_update_sinopsis, {
@@ -446,6 +450,8 @@ def modificar_libro(conn):
                     'i': id_libro,
                     'p': precio
                 })
+
+            conn.commit()
 
         except psycopg2.Error as e:
             if e.pgcode == psycopg2.errorcodes.NOT_NULL_VIOLATION:
@@ -1354,5 +1360,150 @@ def aumentar_curso(conn):
         except psycopg2.Error as e:
             print_generic_error(e)
             conn.rollback()
+
+
+def modificar_estudiante(conn):
+    """
+    Modifica los atributos de un estudiante en la base de datos. Pide al usuario el id del estudiante y los atributos a modificar.
+    :param conn: La conexión abierta a la BD
+    :return: Nada
+    """
+
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
+
+    sql_update_nombre = """
+        UPDATE 
+            Estudiante 
+        SET 
+            nombre = %(n)s 
+        WHERE 
+            id = %(i)s
+    """
+
+    sql_update_apellidos = """
+        UPDATE 
+            Estudiante 
+        SET 
+            apellidos = %(a)s 
+        WHERE 
+            id = %(i)s
+    """
+
+    sql_update_curso = """
+        UPDATE 
+            Estudiante 
+        SET 
+            curso = %(c)s 
+        WHERE 
+            id = %(i)s
+    """
+
+    sql_update_email = """
+        UPDATE 
+            Estudiante 
+        SET 
+            email = %(e)s 
+        WHERE 
+            id = %(i)s
+    """
+
+    sql_update_telefono = """
+        UPDATE 
+            Estudiante  
+        SET 
+            telefono = %(t)s 
+        WHERE 
+            id = %(i)s
+    """
+
+    print("+----------------------+")
+    print("| Modificar estudiante |")
+    print("+----------------------+")
+
+    sid_estudiante = input("Id del estudiante: ").strip()
+    try:
+        id_estudiante = int(sid_estudiante)
+    except ValueError:
+        print("Error: El id del estudiante debe ser un número entero.")
+        return
+
+    with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+        try:
+            if input("Modificar nombre? (s/n): ").strip().lower() == "s":
+                snombre = input("Nuevo nombre: ").strip()
+                nombre = None if snombre == "" else snombre
+
+                cur.execute(sql_update_nombre, {
+                    'n': nombre,
+                    'i': id_estudiante,
+                })
+
+            if input("Modificar apellidos? (s/n): ").strip().lower() == "s":
+                sapellidos = input("Nuevos apellidos: ").strip()
+                apellidos = None if sapellidos == "" else sapellidos
+
+                cur.execute(sql_update_apellidos, {
+                    'a': apellidos,
+                    'i': id_estudiante,
+                })
+
+            if input("Modificar curso? (s/n):").strip().lower() == "s":
+                scurso = input("Nuevo curso: ").strip()
+                try:
+                    curso = None if scurso == "" else int(scurso)
+                except ValueError:
+                    print("Error: El curso debe ser un número entero.")
+                    return
+
+                cur.execute(sql_update_curso, {
+                    'c': curso,
+                    'i': id_estudiante,
+                })
+
+            if input("Modificar email? (s/n): ").strip().lower() == "s":
+                semail = input("Nuevo email: ").strip()
+                email = None if semail == "" else semail
+
+                cur.execute(sql_update_email, {
+                    'e': email,
+                    'i': id_estudiante,
+                })
+
+            if input("Modificar telefono? (s/n): ").strip().lower() == "s":
+                stelefono = input("Nuevo telefono: ").strip()
+                telefono = None if stelefono == "" else stelefono
+
+                cur.execute(sql_update_telefono, {
+                    't': telefono,
+                    'i': id_estudiante,
+                })
+
+            conn.commit()
+
+        except psycopg2.Error as e:
+            if e.pgcode == psycopg2.errorcodes.NOT_NULL_VIOLATION:
+                if e.diag.column_name == "nombre":
+                    print("Error: El nombre no puede ser nulo.")
+                elif e.diag.column_name == "apellidos":
+                    print("Error: Los apellidos no puede ser nulo.")
+                elif e.diag.column_name == "curso":
+                    print("Error: El curso no puede ser nulo.")
+                elif e.diag.column_name == "email":
+                    print("Error: El email no puede ser nulo.")
+            elif e.pgcode == psycopg2.errorcodes.STRING_DATA_RIGHT_TRUNCATION:
+                if e.diag.column_name == "nombre":
+                    print("Error: El nombre es demasiado largo.")
+                elif e.diag.column_name == "apellidos":
+                    print("Error: Los apellidos son demasiado largos.")
+                elif e.diag.column_name == "email":
+                    print("Error: El email es demasiado largo.")
+                elif e.diag.column_name == "telefono":
+                    print("Error: El telefono es demasiado largo.")
+            elif e.pgcode == psycopg2.errorcodes.NUMERIC_VALUE_OUT_OF_RANGE:
+                print("Error: El curso es demasiado grande.")
+            else:
+                print_generic_error(e)
+            conn.rollback()
+
 
 
