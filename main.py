@@ -1299,4 +1299,60 @@ def consultar_estudiante(conn):
             conn.rollback()
 
 
+def aumentar_curso(conn):
+    """
+    Aumenta el curso de uno o varios estudiantes. Pide al usuario los datos necesarios.
+    :param conn: La conexión abierta a la BD
+    :return: Nada
+    """
+
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
+
+    sql_sentence = """
+        UPDATE
+            Estudiante
+        SET 
+            curso = curso + 1
+        WHERE 
+            id = %(i)s
+    """
+
+    print("+-------------------------------+")
+    print("| Aumentar curso de estudiantes |")
+    print("+-------------------------------+")
+
+
+    id_estudiantes = []
+
+    while True:
+        sid_estudiante = input("Id del estudiante (o 'enter' para terminar): ").strip()
+        if sid_estudiante == "":
+            break
+        try:
+            id_estudiantes.append(int(sid_estudiante))
+        except ValueError:
+            print("El id del estudiante debe ser un número entero.")
+            continue
+
+    with conn.cursor() as cur:
+        try:
+            actualizados = 0
+
+            for id_estudiante in id_estudiantes:
+                cur.execute(sql_sentence, {
+                    'i': id_estudiante,
+                })
+
+                if cur.rowcount == 1:
+                    actualizados += 1
+                else:
+                    print(f"El estudiante con id {id_estudiante} no existe.")  # Continuamos igualmente
+
+            print(f"Curso aumentado correctamente a {actualizados} estudiantes.")
+            conn.commit()
+
+        except psycopg2.Error as e:
+            print_generic_error(e)
+            conn.rollback()
+
 

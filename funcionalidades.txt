@@ -32,8 +32,7 @@ PRÉSTAMO
 ESTUDIANTE
 
 - [POST] añadir estudiante
-- [GET] ver detalles de usuario (con libros en posesión)
-- [GET] ver libros en posesión
+- [GET] ver detalles de estudiante (con libros en posesión)
 - [PUT] aumentar curso en 1 unidad de estudiantes de un curso determinado
 - [PUT] modificar estudiante manualmente
 - [DELETE] eliminar estudiante
