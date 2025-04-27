@@ -599,31 +599,28 @@ def actualizar_precio(conn):
             conn.rollback()
 
 
-def ver_precio_fecha_concreta(conn):
+def ver_historial_precios(conn):
     """
-    Muestra el precio de un libro en una fecha concreta. Pide al usuario el id del libro y la fecha.
+    Muestra el historial de precios de un libro. Pide al usuario el id del libro.
     :param conn: La conexión abierta a la BD
     :return: Nada
     """
 
     sql_sentence = """
         SELECT 
-            precio
+            precio,
+            fecha
         FROM 
             PrecioLibro
-        WHERE 
+        WHERE   
             idLibro = %(i)s
-          AND 
-            fecha <= %(f)s
         ORDER BY 
             fecha DESC
-        LIMIT 
-            1
     """
 
-    print("+---------------------------------------+")
-    print("| Ver precio de libro en fecha concreta |")
-    print("+---------------------------------------+")
+    print("+-----------------------------------+")
+    print("| Ver historial de precios de libro |")
+    print("+-----------------------------------+")
 
     sid_libro = input("Id del libro: ")
     try:
@@ -634,33 +631,192 @@ def ver_precio_fecha_concreta(conn):
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
-            fecha_objetivo = input("Fecha objetivo (formato YYYY-MM-DD): ")
-            try:
-                fecha_objetivo = None if fecha_objetivo == "" else datetime.strptime(fecha_objetivo, "%Y-%m-%d")
-            except ValueError:
-                print("Error: Formato de fecha incorrecto.")
-                return
-
             cur.execute(sql_sentence, {
                 'i': id_libro,
-                'f': fecha_objetivo
             })
 
-            precio = cur.fetchone()
+            precios = cur.fetchall()
 
-            if precio is None:
+            if not precios:
                 print("Error: El libro no tiene un precio registrado.")
                 return
 
-            print(f"Precio del libro con id {id_libro} en la fecha {fecha_objetivo.date()}: {precio['precio']} €")
+            for precio in precios:
+                print(f"{precio['fecha'].date()} -> {precio['precio']:.2f} €")
 
         except psycopg2.Error as e:
             print_generic_error(e)
             conn.rollback()
 
 
+def añadir_categoria(conn):
+    """
+    Añade una categoría a la base de datos. Pide al usuario los datos necesarios.
+    :param conn: La conexión abierta a la BD
+    :return: Nada
+    """
+
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
+
+    sql_sentence = """
+       INSERT INTO 
+           Categoria (nombre, descripcion))
+       VALUES 
+           (%(n)s, %(d)s)
+    """
+
+    print("+------------------+")
+    print("| Añadir categoria |")
+    print("+------------------+")
+
+    snombre = input("Nombre: ")
+    nombre = None if snombre == "" else snombre
+
+    sdescripcion = input("Descripción: ")
+    descripcion = None if sdescripcion == "" else sdescripcion
+
+    with conn.cursor() as cur:
+        try:
+            cur.execute(sql_sentence, {
+                'n': nombre,
+                'd': descripcion,
+            })
+
+            conn.commit()
+            print("Categoría añadida correctamente.")
+
+        except psycopg2.Error as e:
+            if e.pgcode == psycopg2.errorcodes.UNIQUE_VIOLATION:
+                print("Error: Una categoría con ese nombre ya existe.")
+            elif e.pgcode == psycopg2.errorcodes.NOT_NULL_VIOLATION:
+                if e.diag.column_name == "nombre":
+                    print("Error: El nombre no puede ser nulo.")
+                elif e.diag.column_name == "descripcion":
+                    print("Error: La descripcion no puede ser nula.")
+            elif e.pgcode == psycopg2.errorcodes.STRING_DATA_RIGHT_TRUNCATION:
+                if e.diag.column_name == "nombre":
+                    print("Error: El nombre es demasiado largo.")
+                elif e.diag.column_name == "descripcion":
+                    print("Error: La descripcion es demasiado larga.")
+            else:
+                print_generic_error(e)
+            conn.rollback()
 
 
+def modificar_categoria(conn):
+    """
+    Modifica los atributos de una categoria en la base de datos. Pide al usuario el id de la categoria y los atributos a modificar.
+    :param conn: La conexión abierta a la BD
+    :return: Nada
+    """
+
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
+
+    sql_update_nombre = """
+        UPDATE 
+            Categoria 
+        SET 
+            nombre = %(n)s 
+        WHERE 
+            id = %(i)s
+    """
+
+    sql_update_descripcion = """
+        UPDATE 
+            Categoria  
+        SET 
+            descripcion = %(d)s 
+        WHERE 
+            id = %(i)s
+    """
+
+    print("+---------------------+")
+    print("| Modificar categoria |")
+    print("+---------------------+")
+
+    sid_categoria = input("Id de la categoria: ")
+    try:
+        id_categoria = int(sid_categoria)
+    except ValueError:
+        print("Error: El id de la categoria debe ser un número entero.")
+        return
+
+    with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+        try:
+            if input("Modificar nombre? (s/n): ").lower() == "s":
+                snombre = input("Nuevo titulo: ")
+                nombre = None if snombre == "" else snombre
+
+                cur.execute(sql_update_nombre, {
+                    'n': nombre,
+                    'i': id_categoria
+                })
+
+            if input("Modificar descripcion? (s/n): ").lower() == "s":
+                sdescripcion = input("Nuevo autor: ")
+                descripcion = None if sdescripcion == "" else sdescripcion
+
+                cur.execute(sql_update_descripcion, {
+                    'd': descripcion,
+                    'i': id_categoria
+                })
+
+        except psycopg2.Error as e:
+            if e.pgcode == psycopg2.errorcodes.NOT_NULL_VIOLATION:
+                if e.diag.column_name == "nombre":
+                    print("Error: El nombre no puede ser nulo.")
+                elif e.diag.column_name == "descripcion":
+                    print("Error: La descripcion no puede ser nula.")
+            elif e.pgcode == psycopg2.errorcodes.STRING_DATA_RIGHT_TRUNCATION:
+                if e.diag.column_name == "nombre":
+                    print("Error: El nombre es demasiado largo.")
+                elif e.diag.column_name == "descripcion":
+                    print("Error: La descripcion es demasiado larga.")
+            else:
+                print_generic_error(e)
+            conn.rollback()
 
 
+def eliminar_libro(conn):
+    """
+    Elimina una categoria de la base de datos. Pide al usuario el id de la categoria.
+    :param conn: La conexión abierta a la BD
+    :return: Nada
+    """
 
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
+
+    sql_sentence = """
+        DELETE FROM 
+            Categoria 
+        WHERE 
+            id = %(i)s
+    """
+
+    print("+--------------------+")
+    print("| Eliminar categoria |")
+    print("+--------------------+")
+
+    sid_categoria = input("Id de la categoria: ")
+    try:
+        id_categoria = int(sid_categoria)
+    except ValueError:
+        print("Error: El id de la categoria debe ser un número entero.")
+        return
+
+    with conn.cursor() as cur:
+        try:
+            cur.execute(sql_sentence, {
+                'i': id_categoria
+            })
+
+            conn.commit()
+
+            if cur.rowcount == 0:
+                print(f"La categoria con id {id_categoria} no existe.")
+            else:
+                print("Categoria eliminada correctamente.")
+
+        except psycopg2.Error as e:
+            print_generic_error(e)
+            conn.rollback()

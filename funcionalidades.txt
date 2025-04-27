@@ -10,13 +10,11 @@ LIBRO
 PRECIOLIBRO
 
 - [POST] actualizar precio del libro con porcentaje y manualmente
-- [GET] ver precio de libro en fecha concreta
 - [GET] ver historial de precios de libro
 
 
 CATEGORÍA
 
-- [POST] añadir categoría
 - [GET] consultar categorías
 - [PUT] modificar categoría
 - [DELETE] eliminar categoría
@@ -26,10 +24,7 @@ PRÉSTAMO
 - [POST] efectuar préstamo
 - [GET] ver historial de préstamos de un libro
 - [GET] ver historial de préstamos de un estudiante
-- [GET] ver préstamos vigentes y por rango de fechas
 - [GET] ver detalles de un préstamo
-- [GET] verificar el estado de un préstamo
-- [PUT] modificar comentarios de un préstamo
 - [PUT] dar un préstamo por finalizado
 - [DELETE] eliminar registro de un préstamo
 
