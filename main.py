@@ -1,9 +1,11 @@
 import sys
 import psycopg2
+import psycopg2.extensions
 import psycopg2.extras
 import psycopg2.errorcodes
 
-def print_generic_error(e): print(f"Error: {e.pgcode} - {e.pgerror}")
+def print_generic_error(e): print(f"Error: {getattr(e, 'pgcode', 'Unknown')} - {getattr(e, 'pgerror', 'Unknown error')}")
+
 
 def connect_db():
      """
@@ -25,8 +27,12 @@ def disconnect_db(conn):
     :param conn: La conexión aberta a la BD
     :return: Nada
     """
-    conn.commit()
-    conn.close()
+    try:
+        conn.commit()
+    except psycopg2.Error:
+        conn.rollback()
+    finally:
+        conn.close()
     
 
 def anadir_libro(conn):
@@ -35,6 +41,16 @@ def anadir_libro(conn):
     :param conn: La conexión abierta a la BD
     :return: Nada
     """
+
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
+
+    sql_sentence = """
+        INSERT INTO 
+            Libro (titulo, autor, anioPublicacion, isbn, sinopsis, idCategoria) 
+        VALUES 
+            (%(t)s, %(a)s, %(aP)s, %(i)s, %(s)s, %(iC)s)
+    """
+
     with conn.cursor() as cur:
         try:
             print("+--------------+")
@@ -53,8 +69,7 @@ def anadir_libro(conn):
             except ValueError:
                 print("Error: El año de publicación debe ser un número entero.")
                 return
-            
-            
+
             sisbn = input("ISBN: ")
             isbn = None if sisbn == "" else sisbn
             
@@ -68,11 +83,14 @@ def anadir_libro(conn):
                 print("Error: El id de categoría debe ser un número entero.")
                 return
             
-            cur.execute("""
-                INSERT INTO Libro (titulo, autor, anioPublicacion, isbn, sinopsis, idCategoria) 
-                VALUES (%s, %s, %s, %s, %s, %s)
-                """, 
-                (titulo, autor, anio_publicacion, isbn, sinopsis, id_categoria))
+            cur.execute(sql_sentence, {
+                't': titulo,
+                'a': autor,
+                'aP': anio_publicacion,
+                'i': isbn,
+                's': sinopsis,
+                'iC': id_categoria
+            })
             
             conn.commit()
             print("Libro añadido correctamente.")
@@ -104,7 +122,33 @@ def buscar_libros(conn):
     :param conn: La conexión abierta a la BD
     :return: Nada
     """
-    with conn.cursor() as cur:
+
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
+
+    sql_sentence = """
+        SELECT 
+            L.id, 
+            L.titulo, 
+            L.autor, 
+            L.anioPublicacion, 
+            L.isbn, 
+            C.nombre AS nombreCategoria,
+            P.precio AS precioLibro
+        FROM 
+            Libro L
+        LEFT JOIN 
+            Categoria C ON L.idCategoria = C.id
+        LEFT JOIN
+            PrecioLibro P ON L.id = P.idLibro
+        WHERE 
+            (%(t)s IS NULL OR L.titulo ILIKE %(t0)s)
+            AND (%(a)s IS NULL OR L.autor ILIKE %(a0)s)
+            AND (%(aP)s IS NULL OR L.anioPublicacion = %(aP0)s)
+            AND (%(i)s IS NULL OR L.isbn ILIKE %(i0)s)
+            AND (%(iC)s IS NULL OR L.idCategoria = %(iC0)s)
+    """
+
+    with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
             print("+--------------+")
             print("| Buscar libro |")
@@ -125,9 +169,6 @@ def buscar_libros(conn):
             
             sisbn = input("ISBN: ")
             isbn = None if sisbn == "" else sisbn
-            
-            ssinopsis = input("Sinopsis: ")
-            sinopsis = None if ssinopsis == "" else sinopsis
         
             sid_categoria = input("Id de categoria: ")
             try:
@@ -136,17 +177,18 @@ def buscar_libros(conn):
                 print("Error: El id de categoría debe ser un número entero.")
                 return
             
-            cur.execute("""
-                SELECT * FROM Libro 
-                WHERE (%s IS NULL OR titulo ILIKE %s) AND 
-                      (%s IS NULL OR autor ILIKE %s) AND 
-                      (%s IS NULL OR anioPublicacion = %s) AND 
-                      (%s IS NULL OR isbn ILIKE %s) AND 
-                      (%s IS NULL OR sinopsis ILIKE %s) AND 
-                      (%s IS NULL OR idCategoria = %s)
-                """, 
-                (titulo, f"%{titulo}%" if titulo is not None else None, autor, f"%{autor}%" if autor is not None else None, anio_publicacion, anio_publicacion, 
-                 isbn, f"%{isbn}%" if isbn is not None else None, sinopsis, f"%{sinopsis}%" if sinopsis is not None else None, id_categoria, id_categoria))
+            cur.execute(sql_sentence,{
+                't': titulo,
+                't0': f"%{titulo}%" if titulo is not None else None,
+                'a': autor,
+                'a0': f"%{autor}%" if autor is not None else None,
+                'aP': anio_publicacion,
+                'aP0': anio_publicacion,
+                'i': isbn,
+                'i0': f"%{isbn}%" if isbn is not None else None,
+                'iC': id_categoria,
+                'iC0': id_categoria
+            })
             
             libros = cur.fetchall()
             
@@ -157,13 +199,12 @@ def buscar_libros(conn):
             print(f"Se han encontrado {len(libros)} libros.")
             
             for libro in libros:
-                print(f"ID: {libro[0]}")
-                print(f"Titulo: {libro[1]}")
-                print(f"Autor: {libro[2]}")
-                print(f"Año de publicación: {libro[3]}")
-                print(f"ISBN: {libro[4]}")
-                print(f"Sinopsis: {libro[5]}")
-                print(f"Id categoria: {libro[6]}")
+                print(f"ID: {libro['id']}")
+                print(f"Titulo: {libro['titulo']}")
+                print(f"Autor: {libro['autor']}")
+                print(f"Año de publicación: {libro['anioPublicacion']}")
+                print(f"ISBN: {libro['isbn']}")
+                print(f"Categoria: {libro['nombreCategoria']}")
         
         except psycopg2.Error as e:
             print_generic_error(e)
@@ -176,7 +217,41 @@ def consultar_libro(conn):
     :param conn: La conexión abierta a la BD
     :return: Nada
     """
-    with conn.cursor() as cur:
+
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
+
+    sql_sentence = """
+        SELECT 
+            L.id,
+            L.titulo,
+            L.autor,
+            L.anioPublicacion,
+            L.isbn,
+            L.sinopsis,
+            L.idCategoria,
+            C.nombre AS nombreCategoria,
+            (
+                SELECT precio
+                FROM PrecioLibro
+                WHERE idLibro = L.id
+                ORDER BY fecha DESC
+                LIMIT 1 
+            ) AS precioActual,
+            NOT EXISTS (
+                SELECT 1
+                FROM Prestamo P
+                WHERE P.idLibro = L.id
+                AND P.fechaDevolucion IS NULL
+            ) AS disponible
+        FROM 
+            Libro L
+        LEFT JOIN
+            Categoria C ON L.idCategoria = C.id
+        WHERE
+            %(i)s = L.id
+    """
+
+    with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
             print("+-----------------+")
             print("| Consultar libro |")
@@ -189,11 +264,9 @@ def consultar_libro(conn):
                 print("Error: El id del libro debe ser un número entero.")
                 return
             
-            cur.execute("""
-                SELECT * FROM Libro 
-                WHERE idLibro = %s
-                """, 
-                (id_libro,))
+            cur.execute(sql_sentence, {
+                'i': id_libro
+            })
             
             libro = cur.fetchone()
             
@@ -201,16 +274,19 @@ def consultar_libro(conn):
                 print("No se ha encontrado el libro.")
                 return
             
-            print(f"ID: {libro[0]}")
-            print(f"Titulo: {libro[1]}")
-            print(f"Autor: {libro[2]}")
-            print(f"Año de publicación: {libro[3]}")
-            print(f"ISBN: {libro[4]}")
-            print(f"Sinopsis: {libro[5]}")
-            print(f"Id categoria: {libro[6]}")
+            print(f"Id: {libro['id']}")
+            print(f"Titulo: {libro['titulo']}")
+            print(f"Autor: {libro['autor']}")
+            print(f"Año de publicación: {libro['anioPublicacion']}")
+            print(f"ISBN: {libro['isbn']}")
+            print(f"Sinopsis: {libro['sinopsis']}")
+            print(f"Id de categoria: {libro['idCategoria']}")
+            print(f"Categoria: {libro['nombreCategoria']}")
+            print(f"Precio actual: {libro['precioActual'] if libro['precioActual'] is not None else 'Sin precio registrado'} €")
+            print(f"Disponibilidad: {"Disponible" if libro['disponible'] else "No disponible"}")
         
         except psycopg2.Error as e:
             print_generic_error(e)
             conn.rollback()
             
-    
+
