@@ -820,3 +820,62 @@ def eliminar_libro(conn):
         except psycopg2.Error as e:
             print_generic_error(e)
             conn.rollback()
+
+
+def efectuar_prestamo(conn):
+    """
+    Añade un prestamo a la base de datos. Pide al usuario los datos necesarios.
+    :param conn: La conexión abierta a la BD
+    :return: Nada
+    """
+
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
+
+    sql_sentence = """
+        INSERT INTO Prestamo (fechaPrestamo, comentarios, idLibro, idEstudiante)
+        VALUES (NOW(), %(c)s, %(iL)s, %(iE)s)
+    """
+
+    print("+-------------------+")
+    print("| Efectuar prestamo |")
+    print("+-------------------+")
+
+    scomentarios = input("Comentarios: ")
+    comentarios = None if scomentarios == "" else scomentarios
+
+    sid_libro = input("Año de publicación: ")
+    try:
+        id_libro = None if sid_libro == "" else int(sid_libro)
+    except ValueError:
+        print("Error: El id del libro debe ser un número entero.")
+        return
+
+    sid_estudiante = input("Año de publicación: ")
+    try:
+        id_estudiante = None if sid_estudiante == "" else int(sid_estudiante)
+    except ValueError:
+        print("Error: El id del estudiante debe ser un número entero.")
+        return
+
+    with conn.cursor() as cur:
+        try:
+            cur.execute(sql_sentence, {
+                'c': comentarios,
+                'iL': id_libro,
+                'iE': id_estudiante,
+            })
+
+            conn.commit()
+            print("Prestamo efectuado correctamente.")
+
+        except psycopg2.Error as e:
+            if e.pgcode == psycopg2.errorcodes.FOREIGN_KEY_VIOLATION:
+                if e.diag.column_name == "idLibro":
+                    print(f"Error: Libro especificado no existe.")
+                elif e.diag.column_name == "idEstudiante":
+                    print(f"Error: Estudiante especificado no existe.")
+            elif e.pgcode == psycopg2.errorcodes.STRING_DATA_RIGHT_TRUNCATION:
+                print("Error: El comentario es demasiado largo.")
+            else:
+                print_generic_error(e)
+            conn.rollback()
