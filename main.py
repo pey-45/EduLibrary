@@ -1,4 +1,3 @@
-import datetime
 import sys
 import psycopg2
 import psycopg2.extensions
@@ -10,8 +9,8 @@ def print_generic_error(e): print(f"Error: {getattr(e, 'pgcode', 'Unknown')} - {
 
 def connect_db():
      """
-     Se conecta a la BD predeterminada del usuario (DNS vacio)
-     :return: La conexión con la BD (o sale del programa de no conseguirla)
+     Establece una conexión con la base de datos predeterminada del usuario (usando DNS vacío).
+     :return: La conexión establecida con la base de datos. Si no se puede establecer, el programa termina.
      """
      try:
         conn = psycopg2.connect("")
@@ -24,9 +23,9 @@ def connect_db():
          
 def disconnect_db(conn):
     """
-    Se desconecta de la BD. Hace antes un commit de la transacción activa.
-    :param conn: La conexión aberta a la BD
-    :return: Nada
+    Cierra la conexión con la base de datos, realizando antes un commit de la transacción activa.
+    :param conn: La conexión activa con la base de datos
+    :return: None
     """
     try:
         conn.commit()
@@ -35,15 +34,13 @@ def disconnect_db(conn):
     finally:
         conn.close()
     
-
+# 1
 def anadir_libro(conn):
     """
-    Añade un libro a la base de datos. Pide al usuario los datos necesarios.
-    :param conn: La conexión abierta a la BD
-    :return: Nada
+    Añade un nuevo libro a la biblioteca solicitando al usuario todos los datos necesarios.
+    :param conn: La conexión activa con la base de datos
+    :return: None
     """
-
-    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
 
     sql_sentence = """
         INSERT INTO 
@@ -54,7 +51,7 @@ def anadir_libro(conn):
 
 
     print("+--------------+")
-    print("| Añadir libro |")
+    print("| Anadir libro |")
     print("+--------------+")
 
     stitulo = input("Titulo: ").strip()
@@ -117,15 +114,13 @@ def anadir_libro(conn):
                 print_generic_error(e) 
             conn.rollback()
             
-            
+# 2
 def buscar_libros(conn):
     """
-    Busca libros en la base de datos. Pide al usuario palabras clave, autor y/o categorías.
-    :param conn: La conexión abierta a la BD
-    :return: Nada
+    Realiza una búsqueda de libros en la biblioteca según los criterios especificados por el usuario.
+    :param conn: La conexión activa con la base de datos
+    :return: None
     """
-
-    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
 
     sql_sentence = """
         SELECT 
@@ -216,21 +211,19 @@ def buscar_libros(conn):
                 print(f"ISBN: {libro['isbn']}")
                 print(f"Categoria: {libro['nombreCategoria']}")
                 print(f"Precio actual: {libro['precioActual'] if libro['precioActual'] is not None else 'Sin precio registrado'} €")
-                print(f"Disponibilidad: {"Disponible" if libro['disponible'] else "No disponible"}")
+                print(f"Disponibilidad: {'Disponible' if libro['disponible'] else 'No disponible'}")
         
         except psycopg2.Error as e:
             print_generic_error(e)
             conn.rollback()
             
-            
+# 3
 def consultar_libro(conn):
     """
-    Consulta un libro en la base de datos. Pide al usuario el id del libro.
-    :param conn: La conexión abierta a la BD
-    :return: Nada
+    Muestra toda la información disponible de un libro específico según su ID.
+    :param conn: La conexión activa con la base de datos
+    :return: None
     """
-
-    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
 
     sql_sentence = """
         SELECT 
@@ -294,18 +287,18 @@ def consultar_libro(conn):
             print(f"Id de categoria: {libro['idCategoria']}")
             print(f"Categoria: {libro['nombreCategoria']}")
             print(f"Precio actual: {libro['precioActual'] if libro['precioActual'] is not None else 'Sin precio registrado'} €")
-            print(f"Disponibilidad: {"Disponible" if libro['disponible'] else "No disponible"}")
+            print(f"Disponibilidad: {'Disponible' if libro['disponible'] else 'No disponible'}")
         
         except psycopg2.Error as e:
             print_generic_error(e)
             conn.rollback()
 
-
+# 4
 def modificar_libro(conn):
     """
-    Modifica los atributos de un libro en la base de datos. Pide al usuario el id del libro y los atributos a modificar.
-    :param conn: La conexión abierta a la BD
-    :return: Nada
+    Permite actualizar la información de un libro existente en la biblioteca.
+    :param conn: La conexión activa con la base de datos
+    :return: None
     """
 
     conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
@@ -402,12 +395,12 @@ def modificar_libro(conn):
                     'i': id_libro
                 })
 
-            if input("Modificar año de publicacion? (s/n):").strip().lower() == "s":
-                sanio_publicacion = input("Nuevo año de publicacion: ").strip()
+            if input("Modificar anio de publicacion? (s/n):").strip().lower() == "s":
+                sanio_publicacion = input("Nuevo anio de publicacion: ").strip()
                 try:
                     anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
                 except ValueError:
-                    print("Error: El curso debe ser un número entero.")
+                    print("Error: El anio de publicacion debe ser un número entero.")
                     return
 
                 cur.execute(sql_update_anio_publicacion, {
@@ -476,15 +469,13 @@ def modificar_libro(conn):
                 print_generic_error(e)
             conn.rollback()
 
-
+# 5
 def eliminar_libro(conn):
     """
-    Elimina un libro de la base de datos. Pide al usuario el id del libro.
-    :param conn: La conexión abierta a la BD
-    :return: Nada
+    Elimina permanentemente un libro de la biblioteca según su ID.
+    :param conn: La conexión activa con la base de datos
+    :return: None
     """
-
-    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
 
     sql_sentence = """
         DELETE FROM 
@@ -521,12 +512,12 @@ def eliminar_libro(conn):
             print_generic_error(e)
             conn.rollback()
 
-
+# 6
 def actualizar_precio(conn):
     """
-    Actualiza el precio de un libro en la base de datos. Pide al usuario el id del libro y el nuevo precio o un porcentaje de aumento/descuento.
-    :param conn: La conexión abierta a la BD
-    :return: Nada
+    Actualiza el precio de un libro, permitiendo especificar un nuevo valor o aplicar un porcentaje de variación.
+    :param conn: La conexión activa con la base de datos
+    :return: None
     """
 
     conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
@@ -578,9 +569,6 @@ def actualizar_precio(conn):
                     'p': porcentaje
                 })
 
-                if cur.fetchone() is None:
-                    print("Error: El libro no tiene un precio registrado.")
-                    return
             else:
                 sprecio = input("Nuevo precio: ")
                 precio = None if sprecio == "" else float(sprecio)
@@ -590,6 +578,7 @@ def actualizar_precio(conn):
                     'p': precio
                 })
 
+            print("Precio actualizado correctamente.")
             conn.commit()
 
         except psycopg2.Error as e:
@@ -603,12 +592,12 @@ def actualizar_precio(conn):
                 print_generic_error(e)
             conn.rollback()
 
-
+# 7
 def ver_historial_precios(conn):
     """
-    Muestra el historial de precios de un libro. Pide al usuario el id del libro.
-    :param conn: La conexión abierta a la BD
-    :return: Nada
+    Muestra un listado cronológico de todos los precios que ha tenido un libro específico.
+    :param conn: La conexión activa con la base de datos
+    :return: None
     """
 
     sql_sentence = """
@@ -653,25 +642,23 @@ def ver_historial_precios(conn):
             print_generic_error(e)
             conn.rollback()
 
-
+# 8
 def añadir_categoria(conn):
     """
-    Añade una categoría a la base de datos. Pide al usuario los datos necesarios.
+    Anade una categoria a la base de datos. Pide al usuario los datos necesarios.
     :param conn: La conexión abierta a la BD
     :return: Nada
     """
 
-    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
-
     sql_sentence = """
        INSERT INTO 
-           Categoria (nombre, descripcion))
+           Categoria (nombre, descripcion)
        VALUES 
            (%(n)s, %(d)s)
     """
 
     print("+------------------+")
-    print("| Añadir categoria |")
+    print("| Anadir categoria |")
     print("+------------------+")
 
     snombre = input("Nombre: ")
@@ -707,7 +694,7 @@ def añadir_categoria(conn):
                 print_generic_error(e)
             conn.rollback()
 
-
+# 9
 def modificar_categoria(conn):
     """
     Modifica los atributos de una categoria en la base de datos. Pide al usuario el id de la categoria y los atributos a modificar.
@@ -749,7 +736,7 @@ def modificar_categoria(conn):
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
             if input("Modificar nombre? (s/n): ").strip().lower() == "s":
-                snombre = input("Nuevo titulo: ").strip()
+                snombre = input("Nuevo nombre: ").strip()
                 nombre = None if snombre == "" else snombre
 
                 cur.execute(sql_update_nombre, {
@@ -758,7 +745,7 @@ def modificar_categoria(conn):
                 })
 
             if input("Modificar descripcion? (s/n): ").strip().lower() == "s":
-                sdescripcion = input("Nuevo autor: ").strip()
+                sdescripcion = input("Nueva descripcion: ").strip()
                 descripcion = None if sdescripcion == "" else sdescripcion
 
                 cur.execute(sql_update_descripcion, {
@@ -781,15 +768,13 @@ def modificar_categoria(conn):
                 print_generic_error(e)
             conn.rollback()
 
-
-def eliminar_libro(conn):
+# 10
+def eliminar_categoria(conn):
     """
     Elimina una categoria de la base de datos. Pide al usuario el id de la categoria.
     :param conn: La conexión abierta a la BD
     :return: Nada
     """
-
-    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
 
     sql_sentence = """
         DELETE FROM 
@@ -815,26 +800,24 @@ def eliminar_libro(conn):
                 'i': id_categoria
             })
 
-            conn.commit()
-
             if cur.rowcount == 0:
                 print(f"La categoria con id {id_categoria} no existe.")
+                conn.rollback()
             else:
                 print("Categoria eliminada correctamente.")
+                conn.commit()
 
         except psycopg2.Error as e:
             print_generic_error(e)
             conn.rollback()
 
-
+# 11
 def efectuar_prestamo(conn):
     """
     Añade un prestamo a la base de datos. Pide al usuario los datos necesarios.
     :param conn: La conexión abierta a la BD
     :return: Nada
     """
-
-    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
 
     sql_sentence = """
         INSERT INTO Prestamo (fechaPrestamo, comentarios, idLibro, idEstudiante)
@@ -848,14 +831,14 @@ def efectuar_prestamo(conn):
     scomentarios = input("Comentarios: ").strip()
     comentarios = None if scomentarios == "" else scomentarios
 
-    sid_libro = input("Año de publicación: ").strip()
+    sid_libro = input("Id del libro: ").strip()
     try:
         id_libro = None if sid_libro == "" else int(sid_libro)
     except ValueError:
         print("Error: El id del libro debe ser un número entero.")
         return
 
-    sid_estudiante = input("Año de publicación: ").strip()
+    sid_estudiante = input("Id del estudiante: ").strip()
     try:
         id_estudiante = None if sid_estudiante == "" else int(sid_estudiante)
     except ValueError:
@@ -885,7 +868,7 @@ def efectuar_prestamo(conn):
                 print_generic_error(e)
             conn.rollback()
 
-
+# 12
 def ver_historial_prestamos_libro(conn):
     """
     Muestra el historial de prestamos de un libro. Pide al usuario el id del libro.
@@ -944,7 +927,7 @@ def ver_historial_prestamos_libro(conn):
             print_generic_error(e)
             conn.rollback()
 
-
+# 13
 def ver_historial_prestamos_estudiante(conn):
     """
     Muestra el historial de prestamos de un estudiante. Pide al usuario el id del estudiante.
@@ -958,7 +941,7 @@ def ver_historial_prestamos_estudiante(conn):
             P.fechaDevolucion, 
             P.comentarios, 
             P.idLibro,
-            L.libro as nombreLibro
+            L.titulo as nombreLibro
         FROM 
             Prestamo P
         JOIN 
@@ -1003,7 +986,7 @@ def ver_historial_prestamos_estudiante(conn):
             print_generic_error(e)
             conn.rollback()
 
-
+# 14
 def consultar_prestamo(conn):
     """
     Consulta un prestamo en la base de datos. Pide al usuario el id del prestamo.
@@ -1011,15 +994,13 @@ def consultar_prestamo(conn):
     :return: Nada
     """
 
-    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
-
     sql_sentence = """
         SELECT 
             P.fechaPrestamo, 
             P.fechaDevolucion, 
             P.comentarios, 
             P.idLibro,
-            L.nombre AS nombreLibro,
+            L.titulo AS nombreLibro,
             P.idEstudiante,
             E.nombre AS nombreEstudiante
         FROM 
@@ -1068,7 +1049,7 @@ def consultar_prestamo(conn):
             print_generic_error(e)
             conn.rollback()
 
-
+# 15
 def finalizar_prestamo(conn):
     """
     Finaliza un prestamo en la base de datos. Pide al usuario el id del prestamo.
@@ -1116,15 +1097,13 @@ def finalizar_prestamo(conn):
             print_generic_error(e)
             conn.rollback()
 
-
+# 16
 def eliminar_prestamo(conn):
     """
     Elimina un prestamo de la base de datos. Pide al usuario el id del prestamo.
     :param conn: La conexión abierta a la BD
     :return: Nada
     """
-
-    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
 
     sql_sentence = """
         DELETE FROM 
@@ -1161,15 +1140,13 @@ def eliminar_prestamo(conn):
             print_generic_error(e)
             conn.rollback()
 
-
+# 17
 def anadir_estudiante(conn):
     """
     Añade un estudiante a la base de datos. Pide al usuario los datos necesarios.
     :param conn: La conexión abierta a la BD
     :return: Nada
     """
-
-    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
 
     sql_sentence = """
        INSERT INTO Estudiante (nombre, apellidos, curso, email, telefono)
@@ -1222,7 +1199,7 @@ def anadir_estudiante(conn):
                 if e.diag.column_name == "nombre":
                     print("Error: El nombre no puede ser nulo.")
                 elif e.diag.column_name == "apellidos":
-                    print("Error: Los apellidos no puede ser nulo.")
+                    print("Error: Los apellidos no pueden ser nulos.")
                 elif e.diag.column_name == "curso":
                     print("Error: El curso no puede ser nulo.")
                 elif e.diag.column_name == "email":
@@ -1240,15 +1217,13 @@ def anadir_estudiante(conn):
                 print_generic_error(e)
             conn.rollback()
 
-
+# 18
 def consultar_estudiante(conn):
     """
     Consulta un estudiante en la base de datos. Pide al usuario el id del estudiante.
     :param conn: La conexión abierta a la BD
     :return: Nada
     """
-
-    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
 
     sql_sentence = """
         SELECT 
@@ -1304,7 +1279,7 @@ def consultar_estudiante(conn):
             print_generic_error(e)
             conn.rollback()
 
-
+# 19
 def aumentar_curso(conn):
     """
     Aumenta el curso de uno o varios estudiantes. Pide al usuario los datos necesarios.
@@ -1361,7 +1336,7 @@ def aumentar_curso(conn):
             print_generic_error(e)
             conn.rollback()
 
-
+# 20
 def modificar_estudiante(conn):
     """
     Modifica los atributos de un estudiante en la base de datos. Pide al usuario el id del estudiante y los atributos a modificar.
@@ -1485,7 +1460,7 @@ def modificar_estudiante(conn):
                 if e.diag.column_name == "nombre":
                     print("Error: El nombre no puede ser nulo.")
                 elif e.diag.column_name == "apellidos":
-                    print("Error: Los apellidos no puede ser nulo.")
+                    print("Error: Los apellidos no pueden ser nulos.")
                 elif e.diag.column_name == "curso":
                     print("Error: El curso no puede ser nulo.")
                 elif e.diag.column_name == "email":
@@ -1505,5 +1480,155 @@ def modificar_estudiante(conn):
                 print_generic_error(e)
             conn.rollback()
 
+# 21
+def eliminar_estudiante(conn):
+    """
+    Elimina un estudiante de la base de datos. Pide al usuario el id del estudiante.
+    :param conn: La conexión abierta a la BD
+    :return: Nada
+    """
+
+    sql_sentence = """
+        DELETE FROM 
+            Estudiante  
+        WHERE 
+            id = %(i)s
+    """
+
+    print("+---------------------+")
+    print("| Eliminar estudiante |")
+    print("+---------------------+")
+
+    sid_estudiante = input("Id del estudiante: ")
+    try:
+        id_estudiante = int(sid_estudiante)
+    except ValueError:
+        print("Error: El id del estudiante debe ser un número entero.")
+        return
+
+    with conn.cursor() as cur:
+        try:
+            cur.execute(sql_sentence, {
+                'i': id_estudiante,
+            })
+
+            if cur.rowcount == 0:
+                print(f"El estudiante con id {id_estudiante} no existe.")
+                conn.rollback()
+            else:
+                print("Estudiante eliminado correctamente.")
+                conn.commit()
+
+        except psycopg2.Error as e:
+            print_generic_error(e)
+            conn.rollback()
 
 
+def menu(conn):
+    """
+    Imprime un menú de opciones, solicita la opción y ejecuta la función asociada.
+    'q' para salir.
+    """
+
+    menu_text = """
+                +------+
+                | MENÚ |
+                +------+
+              
+        [LIBROS]
+        1 - Anadir libro        
+        2 - Buscar libros por atributos    
+        3 - Consultar detalles de libro
+        4 - Modificar libro      
+        5 - Eliminar libro   
+         
+        [PRECIOS DE LIBROS]  
+        6 - Actualizar precio de libro
+        7 - Ver historial de precios de libro
+        
+        [CATEGORIAS]
+        8 - Anadir categoria
+        9 - Modificar categoria
+        10 - Eliminar categoria
+        
+        [PRESTAMOS]
+        11 - Efectuar prestamo
+        12 - Ver historial de prestamos de libro
+        13 - Ver historial de prestamos de estudiante
+        14 - Consultar prestamo
+        15 - Finalizar prestamo
+        16 - Eliminar prestamo
+        
+        [ESTUDIANTES]
+        17 - Anadir estudiante
+        18 - Consultar estudiante
+        19 - Aumentar curso de estudiantes
+        20 - Modificar estudiante
+        21 - Eliminar estudiante
+        
+        q - Salir
+    """
+    
+    while True:
+        print(menu_text)
+        tecla = input("Opcion> ")
+        if tecla == 'q':
+            break
+        elif tecla == '1':
+            anadir_libro(conn)
+        elif tecla == '2':
+            buscar_libros(conn)
+        elif tecla == '3':
+            consultar_libro(conn)
+        elif tecla == '4':
+            modificar_libro(conn)
+        elif tecla == '5':
+            eliminar_libro(conn)
+        elif tecla == '6':
+            actualizar_precio(conn)
+        elif tecla == '7':
+            ver_historial_precios(conn)
+        elif tecla == '8':
+            añadir_categoria(conn)
+        elif tecla == '9':
+            modificar_categoria(conn)
+        elif tecla == '10':
+            eliminar_categoria(conn)
+        elif tecla == '11':
+            efectuar_prestamo(conn)
+        elif tecla == '12':
+            ver_historial_prestamos_libro(conn)
+        elif tecla == '13':
+            ver_historial_prestamos_estudiante(conn)
+        elif tecla == '14':
+            consultar_prestamo(conn)
+        elif tecla == '15':
+            finalizar_prestamo(conn)
+        elif tecla == '16':
+            eliminar_prestamo(conn)
+        elif tecla == '17':
+            anadir_estudiante(conn)
+        elif tecla == '18':
+            consultar_estudiante(conn)
+        elif tecla == '19':
+            aumentar_curso(conn)
+        elif tecla == '20':
+            modificar_estudiante(conn)
+        elif tecla == '21':
+            eliminar_estudiante(conn)
+
+
+def main():
+    """
+    Funcion principal. Conecta a la bd y ejecuta el menu.
+    Cando sale del menu, desconecta da bd y termina el programa.
+    """
+    print('Conectando a PosgreSQL...')
+    conn = connect_db()
+    print('Conectado.')
+    menu(conn)
+    disconnect_db(conn)
+
+
+if __name__ == '__main__':
+    main()
