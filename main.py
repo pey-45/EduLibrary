@@ -57,26 +57,26 @@ def anadir_libro(conn):
     print("| Añadir libro |")
     print("+--------------+")
 
-    stitulo = input("Titulo: ")
+    stitulo = input("Titulo: ").strip()
     titulo = None if stitulo == "" else stitulo
 
-    sautor = input("Autor: ")
+    sautor = input("Autor: ").strip()
     autor = None if sautor == "" else sautor
 
-    sanio_publicacion = input("Año de publicación: ")
+    sanio_publicacion = input("Año de publicación: ").strip()
     try:
         anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
     except ValueError:
         print("Error: El año de publicación debe ser un número entero.")
         return
 
-    sisbn = input("ISBN: ")
+    sisbn = input("ISBN: ").strip()
     isbn = None if sisbn == "" else sisbn
 
-    ssinopsis = input("Sinopsis: ")
+    ssinopsis = input("Sinopsis: ").strip()
     sinopsis = None if ssinopsis == "" else ssinopsis
 
-    sid_categoria = input("Id de categoria: ")
+    sid_categoria = input("Id de categoria: ").strip()
     try:
         id_categoria = None if sid_categoria == "" else int(sid_categoria)
     except ValueError:
@@ -234,7 +234,6 @@ def consultar_libro(conn):
 
     sql_sentence = """
         SELECT 
-            L.id,
             L.titulo,
             L.autor,
             L.anioPublicacion,
@@ -286,7 +285,7 @@ def consultar_libro(conn):
                 print("No se ha encontrado el libro.")
                 return
             
-            print(f"Id: {libro['id']}")
+            print(f"Id: {id_libro}")
             print(f"Titulo: {libro['titulo']}")
             print(f"Autor: {libro['autor']}")
             print(f"Año de publicación: {libro['anioPublicacion']}")
@@ -376,7 +375,7 @@ def modificar_libro(conn):
     print("| Modificar libro |")
     print("+-----------------+")
 
-    sid_libro = input("Id del libro: ")
+    sid_libro = input("Id del libro: ").strip()
     try:
         id_libro = int(sid_libro)
     except ValueError:
@@ -385,8 +384,8 @@ def modificar_libro(conn):
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
-            if input("Modificar título? (s/n): ").lower() == "s":
-                stitulo = input("Nuevo titulo: ")
+            if input("Modificar título? (s/n): ").strip().lower() == "s":
+                stitulo = input("Nuevo titulo: ").strip()
                 titulo = None if stitulo == "" else stitulo
 
                 cur.execute(sql_update_titulo, {
@@ -394,8 +393,8 @@ def modificar_libro(conn):
                     'i': id_libro
                 })
 
-            if input("Modificar autor? (s/n): ").lower() == "s":
-                sautor = input("Nuevo autor: ")
+            if input("Modificar autor? (s/n): ").strip().lower() == "s":
+                sautor = input("Nuevo autor: ").strip()
                 autor = None if sautor == "" else sautor
 
                 cur.execute(sql_update_autor, {
@@ -403,8 +402,8 @@ def modificar_libro(conn):
                     'i': id_libro
                 })
 
-            if input("Modificar año de publicacion? (s/n):").lower() == "s":
-                sanio_publicacion = input("Nuevo año de publicacion: ")
+            if input("Modificar año de publicacion? (s/n):").strip().lower() == "s":
+                sanio_publicacion = input("Nuevo año de publicacion: ").strip()
                 anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
 
                 cur.execute(sql_update_anio_publicacion, {
@@ -412,8 +411,8 @@ def modificar_libro(conn):
                     'i': id_libro
                 })
 
-            if input("Modificar ISBN? (s/n): ").lower() == "s":
-                sisbn = input("Nuevo ISBN: ")
+            if input("Modificar ISBN? (s/n): ").strip().lower() == "s":
+                sisbn = input("Nuevo ISBN: ").strip()
                 isbn = None if sisbn == "" else sisbn
 
                 cur.execute(sql_update_isbn, {
@@ -421,8 +420,8 @@ def modificar_libro(conn):
                     'i': id_libro
                 })
 
-            if input("Modificar sinopsis? (s/n): ").lower() == "s":
-                ssinopsis = input("Nuevo sinopsis: ")
+            if input("Modificar sinopsis? (s/n): ").strip().lower() == "s":
+                ssinopsis = input("Nuevo sinopsis: ").strip()
                 sinopsis = None if ssinopsis == "" else ssinopsis
 
                 cur.execute(sql_update_sinopsis, {
@@ -430,8 +429,8 @@ def modificar_libro(conn):
                     'i': id_libro
                 })
 
-            if input("Modificar categoria? (s/n): ").lower() == "s":
-                sid_categoria = input("Nuevo id de categoria: ")
+            if input("Modificar categoria? (s/n): ").strip().lower() == "s":
+                sid_categoria = input("Nuevo id de categoria: ").strip()
                 id_categoria = None if sid_categoria == "" else int(sid_categoria)
 
                 cur.execute(sql_update_categoria, {
@@ -439,8 +438,8 @@ def modificar_libro(conn):
                     'i': id_libro
                 })
 
-            if input("Modificar precio? (s/n): ").lower() == "s":
-                sprecio = input("Nuevo precio: ")
+            if input("Modificar precio? (s/n): ").strip().lower() == "s":
+                sprecio = input("Nuevo precio: ").strip()
                 precio = None if sprecio == "" else float(sprecio)
 
                 cur.execute(sql_update_precio, {
@@ -734,7 +733,7 @@ def modificar_categoria(conn):
     print("| Modificar categoria |")
     print("+---------------------+")
 
-    sid_categoria = input("Id de la categoria: ")
+    sid_categoria = input("Id de la categoria: ").strip()
     try:
         id_categoria = int(sid_categoria)
     except ValueError:
@@ -743,8 +742,8 @@ def modificar_categoria(conn):
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
-            if input("Modificar nombre? (s/n): ").lower() == "s":
-                snombre = input("Nuevo titulo: ")
+            if input("Modificar nombre? (s/n): ").strip().lower() == "s":
+                snombre = input("Nuevo titulo: ").strip()
                 nombre = None if snombre == "" else snombre
 
                 cur.execute(sql_update_nombre, {
@@ -752,8 +751,8 @@ def modificar_categoria(conn):
                     'i': id_categoria
                 })
 
-            if input("Modificar descripcion? (s/n): ").lower() == "s":
-                sdescripcion = input("Nuevo autor: ")
+            if input("Modificar descripcion? (s/n): ").strip().lower() == "s":
+                sdescripcion = input("Nuevo autor: ").strip()
                 descripcion = None if sdescripcion == "" else sdescripcion
 
                 cur.execute(sql_update_descripcion, {
@@ -840,17 +839,17 @@ def efectuar_prestamo(conn):
     print("| Efectuar prestamo |")
     print("+-------------------+")
 
-    scomentarios = input("Comentarios: ")
+    scomentarios = input("Comentarios: ").strip()
     comentarios = None if scomentarios == "" else scomentarios
 
-    sid_libro = input("Año de publicación: ")
+    sid_libro = input("Año de publicación: ").strip()
     try:
         id_libro = None if sid_libro == "" else int(sid_libro)
     except ValueError:
         print("Error: El id del libro debe ser un número entero.")
         return
 
-    sid_estudiante = input("Año de publicación: ")
+    sid_estudiante = input("Año de publicación: ").strip()
     try:
         id_estudiante = None if sid_estudiante == "" else int(sid_estudiante)
     except ValueError:
@@ -997,4 +996,70 @@ def ver_historial_prestamos_estudiante(conn):
         except psycopg2.Error as e:
             print_generic_error(e)
             conn.rollback()
+
+
+def consultar_prestamo(conn):
+    """
+    Consulta un prestamo en la base de datos. Pide al usuario el id del prestamo.
+    :param conn: La conexión abierta a la BD
+    :return: Nada
+    """
+
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
+
+    sql_sentence = """
+        SELECT 
+            P.fechaPrestamo, 
+            P.fechaDevolucion, 
+            P.comentarios, 
+            P.idLibro,
+            L.nombre AS nombreLibro,
+            P.idEstudiante,
+            E.nombre AS nombreEstudiante
+        FROM 
+            Prestamo P
+        JOIN 
+            Libro L ON L.id = P.idLibro
+        JOIN 
+            Estudiante E ON E.id = P.idEstudiante
+        WHERE 
+            P.id = %(i)s
+    """
+
+    print("+--------------------+")
+    print("| Consultar prestamo |")
+    print("+--------------------+")
+
+    sid_prestamo = input("Id del prestamo: ")
+    try:
+        id_prestamo = int(sid_prestamo)
+    except ValueError:
+        print("Error: El id del prestamo debe ser un número entero.")
+        return
+
+    with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+        try:
+            cur.execute(sql_sentence, {
+                'i': id_prestamo,
+            })
+
+            prestamo = cur.fetchone()
+
+            if prestamo is None:
+                print("No se ha encontrado el prestamo.")
+                return
+
+            print(f"Id: {id_prestamo}")
+            print(f"Fecha del prestamo: {prestamo['fechaPrestamo'].date()}")
+            print(f"Fecha de devolucion: {prestamo['fechaDevolucion'].date() if prestamo['fechaDevolucion'] else 'No devuelto'}")
+            print(f"Comentarios: {prestamo['comentarios']}")
+            print(f"Id del libro: {prestamo['idLibro']}")
+            print(f"Libro: {prestamo['nombreLibro']}")
+            print(f"Id del estudiante: {prestamo['idEstudiante']}")
+            print(f"Estudiante: {prestamo['nombreEstudiante']}")
+
+        except psycopg2.Error as e:
+            print_generic_error(e)
+            conn.rollback()
+
 
