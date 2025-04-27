@@ -133,13 +133,23 @@ def buscar_libros(conn):
             L.anioPublicacion, 
             L.isbn, 
             C.nombre AS nombreCategoria,
-            P.precio AS precioLibro
+            (
+                SELECT precio
+                FROM PrecioLibro
+                WHERE idLibro = L.id
+                ORDER BY fecha DESC
+                LIMIT 1 
+            ) AS precioActual,
+            NOT EXISTS (
+                SELECT 1
+                FROM Prestamo P
+                WHERE P.idLibro = L.id
+                AND P.fechaDevolucion IS NULL
+            ) AS disponible
         FROM 
             Libro L
         LEFT JOIN 
             Categoria C ON L.idCategoria = C.id
-        LEFT JOIN
-            PrecioLibro P ON L.id = P.idLibro
         WHERE 
             (%(t)s IS NULL OR L.titulo ILIKE %(t0)s)
             AND (%(a)s IS NULL OR L.autor ILIKE %(a0)s)
@@ -205,6 +215,8 @@ def buscar_libros(conn):
                 print(f"Año de publicación: {libro['anioPublicacion']}")
                 print(f"ISBN: {libro['isbn']}")
                 print(f"Categoria: {libro['nombreCategoria']}")
+                print(f"Precio actual: {libro['precioActual'] if libro['precioActual'] is not None else 'Sin precio registrado'} €")
+                print(f"Disponibilidad: {"Disponible" if libro['disponible'] else "No disponible"}")
         
         except psycopg2.Error as e:
             print_generic_error(e)
