@@ -1063,3 +1063,50 @@ def consultar_prestamo(conn):
             conn.rollback()
 
 
+def finalizar_prestamo(conn):
+    """
+    Finaliza un prestamo en la base de datos. Pide al usuario el id del prestamo.
+    :param conn: La conexión abierta a la BD
+    :return: Nada
+    """
+
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
+
+    sql_sentence = """
+        UPDATE 
+            Prestamo
+        SET
+            fechaDevolucion = NOW()
+        WHERE
+            id = %(i)s
+    """
+
+    print("+--------------------+")
+    print("| Finalizar prestamo |")
+    print("+--------------------+")
+
+    sid_prestamo = input("Id del prestamo: ")
+    try:
+        id_prestamo = int(sid_prestamo)
+    except ValueError:
+        print("Error: El id del prestamo debe ser un número entero.")
+        return
+
+    with conn.cursor() as cur:
+        try:
+            cur.execute(sql_sentence, {
+                'i': id_prestamo,
+            })
+
+            if cur.rowcount == 0:
+                print("No se ha encontrado el préstamo.")
+                conn.rollback()
+                return
+
+            conn.commit()
+            print("Prestamo finalizado correctamente.")
+
+        except psycopg2.Error as e:
+            print_generic_error(e)
+            conn.rollback()
+
