@@ -9,7 +9,7 @@ LIBRO
 
 PRECIOLIBRO
 
-- [POST] modificar precio del libro con porcentaje y manualmente
+- [POST] actualizar precio del libro con porcentaje y manualmente
 - [GET] ver precio de libro en fecha concreta
 - [GET] ver historial de precios de libro
 

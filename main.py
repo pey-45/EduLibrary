@@ -1,3 +1,4 @@
+import datetime
 import sys
 import psycopg2
 import psycopg2.extensions
@@ -466,6 +467,8 @@ def modificar_libro(conn):
                     print(f"Error: Libro especificado no existe.")
             elif e.pgcode == psycopg2.errorcodes.NUMERIC_VALUE_OUT_OF_RANGE:
                 print(f"Error: el precio es demasiado alto.")
+            else:
+                print_generic_error(e)
             conn.rollback()
 
 
@@ -483,14 +486,18 @@ def eliminar_libro(conn):
             Libro 
         WHERE 
             id = %(i)s
-        """
+    """
 
     print("+----------------+")
     print("| Eliminar libro |")
     print("+----------------+")
 
     sid_libro = input("Id del libro: ")
-    id_libro = None if sid_libro == "" else int(sid_libro)
+    try:
+        id_libro = None if sid_libro == "" else int(sid_libro)
+    except ValueError:
+        print("Error: El id del libro debe ser un número entero.")
+        return
 
     with conn.cursor() as cur:
         try:
@@ -508,4 +515,152 @@ def eliminar_libro(conn):
         except psycopg2.Error as e:
             print_generic_error(e)
             conn.rollback()
+
+
+def actualizar_precio(conn):
+    """
+    Actualiza el precio de un libro en la base de datos. Pide al usuario el id del libro y el nuevo precio o un porcentaje de aumento/descuento.
+    :param conn: La conexión abierta a la BD
+    :return: Nada
+    """
+
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
+
+    sql_aumento_manual = """
+        INSERT INTO 
+            PrecioLibro (idLibro, precio) 
+        VALUES 
+            (%(i)s, %(p)s)
+    """
+
+    sql_aumento_porcentaje = """
+        INSERT INTO 
+            PrecioLibro (idLibro, precio) 
+        SELECT 
+            %(i)s,
+            precio * (1 + %(p)s / 100.0)
+        FROM 
+            PrecioLibro
+        WHERE 
+            idLibro = %(i)s
+        ORDER BY 
+            fecha DESC
+        LIMIT 
+            1
+    """
+
+    print("+----------------------------+")
+    print("| Actualizar precio de libro |")
+    print("+----------------------------+")
+
+
+    sid_libro = input("Id del libro: ")
+    try:
+        id_libro = None if sid_libro == "" else int(sid_libro)
+    except ValueError:
+        print("Error: El id del librodebe ser un número entero.")
+        return
+
+
+    with conn.cursor() as cur:
+        try:
+            if input("Aumentar precio con porcentaje? (s/n): ").lower() == "s":
+                sporcentaje = input("Porcentaje de aumento/descuento (usar negativo para descuento): ")
+                porcentaje = None if sporcentaje == "" else float(sporcentaje)
+
+                cur.execute(sql_aumento_porcentaje, {
+                    'i': id_libro,
+                    'p': porcentaje
+                })
+
+                if cur.fetchone() is None:
+                    print("Error: El libro no tiene un precio registrado.")
+                    return
+            else:
+                sprecio = input("Nuevo precio: ")
+                precio = None if sprecio == "" else float(sprecio)
+
+                cur.execute(sql_aumento_manual, {
+                    'i': id_libro,
+                    'p': precio
+                })
+
+            conn.commit()
+
+        except psycopg2.Error as e:
+            if e.pgcode == psycopg2.errorcodes.NOT_NULL_VIOLATION:
+                print("Error: El precio no puede ser nulo.")
+            elif e.pgcode == psycopg2.errorcodes.NUMERIC_VALUE_OUT_OF_RANGE:
+                print(f"Error: el precio es demasiado alto.")
+            elif e.pgcode == psycopg2.errorcodes.FOREIGN_KEY_VIOLATION:
+                print(f"Error: Libro especificado no existe.")
+            else:
+                print_generic_error(e)
+            conn.rollback()
+
+
+def ver_precio_fecha_concreta(conn):
+    """
+    Muestra el precio de un libro en una fecha concreta. Pide al usuario el id del libro y la fecha.
+    :param conn: La conexión abierta a la BD
+    :return: Nada
+    """
+
+    sql_sentence = """
+        SELECT 
+            precio
+        FROM 
+            PrecioLibro
+        WHERE 
+            idLibro = %(i)s
+          AND 
+            fecha <= %(f)s
+        ORDER BY 
+            fecha DESC
+        LIMIT 
+            1
+    """
+
+    print("+---------------------------------------+")
+    print("| Ver precio de libro en fecha concreta |")
+    print("+---------------------------------------+")
+
+    sid_libro = input("Id del libro: ")
+    try:
+        id_libro = None if sid_libro == "" else int(sid_libro)
+    except ValueError:
+        print("Error: El id del librodebe ser un número entero.")
+        return
+
+    with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+        try:
+            fecha_objetivo = input("Fecha objetivo (formato YYYY-MM-DD): ")
+            try:
+                fecha_objetivo = None if fecha_objetivo == "" else datetime.strptime(fecha_objetivo, "%Y-%m-%d")
+            except ValueError:
+                print("Error: Formato de fecha incorrecto.")
+                return
+
+            cur.execute(sql_sentence, {
+                'i': id_libro,
+                'f': fecha_objetivo
+            })
+
+            precio = cur.fetchone()
+
+            if precio is None:
+                print("Error: El libro no tiene un precio registrado.")
+                return
+
+            print(f"Precio del libro con id {id_libro} en la fecha {fecha_objetivo.date()}: {precio['precio']} €")
+
+        except psycopg2.Error as e:
+            print_generic_error(e)
+            conn.rollback()
+
+
+
+
+
+
 
