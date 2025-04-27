@@ -504,12 +504,12 @@ def eliminar_libro(conn):
                 'i': id_libro
             })
 
-            conn.commit()
-
             if cur.rowcount == 0:
                 print(f"El libro con id {id_libro} no existe.")
+                conn.rollback()
             else:
                 print("Libro eliminado correctamente.")
+                conn.commit()
 
         except psycopg2.Error as e:
             print_generic_error(e)
@@ -1105,6 +1105,51 @@ def finalizar_prestamo(conn):
 
             conn.commit()
             print("Prestamo finalizado correctamente.")
+
+        except psycopg2.Error as e:
+            print_generic_error(e)
+            conn.rollback()
+
+
+def eliminar_prestamo(conn):
+    """
+    Elimina un prestamo de la base de datos. Pide al usuario el id del prestamo.
+    :param conn: La conexión abierta a la BD
+    :return: Nada
+    """
+
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
+
+    sql_sentence = """
+        DELETE FROM 
+            Prestamo 
+        WHERE 
+            id = %(i)s
+    """
+
+    print("+-------------------+")
+    print("| Eliminar prestamo |")
+    print("+-------------------+")
+
+    sid_prestamo = input("Id del prestamo: ")
+    try:
+        id_prestamo = None if sid_prestamo == "" else int(sid_prestamo)
+    except ValueError:
+        print("Error: El id del prestamo debe ser un número entero.")
+        return
+
+    with conn.cursor() as cur:
+        try:
+            cur.execute(sql_sentence, {
+                'i': id_prestamo,
+            })
+
+            if cur.rowcount == 0:
+                print(f"El prestamo con id {id_prestamo} no existe.")
+                conn.rollback()
+            else:
+                print("Prestamo eliminado correctamente.")
+                conn.commit()
 
         except psycopg2.Error as e:
             print_generic_error(e)
