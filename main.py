@@ -879,3 +879,64 @@ def efectuar_prestamo(conn):
             else:
                 print_generic_error(e)
             conn.rollback()
+
+
+def ver_historial_prestamos_libro(conn):
+    """
+    Muestra el historial de prestamos de un libro. Pide al usuario el id del libro.
+    :param conn: La conexión abierta a la BD
+    :return: Nada
+    """
+
+    sql_sentence = """
+        SELECT 
+            P.fechaPrestamo, 
+            P.fechaDevolucion, 
+            P.comentarios, 
+            P.idEstudiante,
+            E.nombre as nombreEstudiante
+        FROM 
+            Prestamo P
+        JOIN 
+            Estudiante E ON E.id = P.idEstudiante
+        WHERE   
+            P.idLibro = %(i)s
+        ORDER BY 
+            P.fechaPrestamo DESC;
+    """
+
+    print("+-------------------------------------+")
+    print("| Ver historial de prestamos de libro |")
+    print("+-------------------------------------+")
+
+    sid_libro = input("Id del libro: ")
+    try:
+        id_libro = None if sid_libro == "" else int(sid_libro)
+    except ValueError:
+        print("Error: El id del libro debe ser un número entero.")
+        return
+
+    with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+        try:
+            cur.execute(sql_sentence, {
+                'i': id_libro,
+            })
+
+            prestamos = cur.fetchall()
+
+            if not prestamos:
+                print("Error: El libro no tiene prestamos registrados.")
+                return
+
+            for prestamo in prestamos:
+                print(f"Fecha de prestamo: {prestamo['fechaPrestamo'].date()}")
+                print(f"Fecha de devolucion: {prestamo['fechaDevolucion'].date() if prestamo['fechaDevolucion'] else 'No devolucionado'}")
+                print(f"Comentarios: {prestamo['comentarios']}")
+                print(f"Id del estudiante: {prestamo['idEstudiante']}")
+                print(f"Estudiante: {prestamo['nombreEstudiante']}")
+
+        except psycopg2.Error as e:
+            print_generic_error(e)
+            conn.rollback()
+
+
