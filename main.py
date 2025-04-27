@@ -1155,3 +1155,81 @@ def eliminar_prestamo(conn):
             print_generic_error(e)
             conn.rollback()
 
+
+def anadir_estudiante(conn):
+    """
+    Añade un estudiante a la base de datos. Pide al usuario los datos necesarios.
+    :param conn: La conexión abierta a la BD
+    :return: Nada
+    """
+
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
+
+    sql_sentence = """
+       INSERT INTO Estudiante (nombre, apellidos, curso, email, telefono)
+       VALUES (%(n)s, %(a)s, %(c)s, %(e)s, %(t)s)
+    """
+
+    print("+-------------------+")
+    print("| Añadir estudiante |")
+    print("+-------------------+")
+
+    snombre = input("Nombre: ").strip()
+    nombre = None if snombre == "" else snombre
+
+    sapellidos = input("Apellidos: ").strip()
+    apellidos = None if sapellidos == "" else sapellidos
+
+    scurso = input("Curso: ").strip()
+    try:
+        curso = None if scurso == "" else int(scurso)
+    except ValueError:
+        print("Error: El curso debe ser un número entero.")
+        return
+
+    semail = input("Email: ").strip()
+    email = None if semail == "" else semail
+
+    stelefono = input("Telefono (+XX XXX XX XX XX): ").strip()
+    telefono = None if stelefono == "" else stelefono
+
+    with conn.cursor() as cur:
+        try:
+            cur.execute(sql_sentence, {
+                'n': nombre,
+                'a': apellidos,
+                'c': curso,
+                'e': email,
+                't': telefono,
+            })
+
+            conn.commit()
+            print("Estudiante añadido correctamente.")
+
+        except psycopg2.Error as e:
+            if e.pgcode == psycopg2.errorcodes.UNIQUE_VIOLATION:
+                if e.diag.column_name == "email":
+                    print("Error: El email ya existe.")
+                elif e.diag.column_name == "telefono":
+                    print("Error: El telefono ya existe.")
+            elif e.pgcode == psycopg2.errorcodes.NOT_NULL_VIOLATION:
+                if e.diag.column_name == "nombre":
+                    print("Error: El nombre no puede ser nulo.")
+                elif e.diag.column_name == "apellidos":
+                    print("Error: Los apellidos no puede ser nulo.")
+                elif e.diag.column_name == "curso":
+                    print("Error: El curso no puede ser nulo.")
+                elif e.diag.column_name == "email":
+                    print("Error: El email no puede ser nulo.")
+            elif e.pgcode == psycopg2.errorcodes.STRING_DATA_RIGHT_TRUNCATION:
+                if e.diag.column_name == "nombre":
+                    print("Error: El nombre es demasiado largo.")
+                elif e.diag.column_name == "apellidos":
+                    print("Error: Los apellidos son demasiado largos.")
+                elif e.diag.column_name == "email":
+                    print("Error: El email es demasiado largo.")
+                elif e.diag.column_name == "telefono":
+                    print("Error: El telefono es demasiado largo.")
+            else:
+                print_generic_error(e)
+            conn.rollback()
