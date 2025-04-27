@@ -259,7 +259,7 @@ def consultar_libro(conn):
         LEFT JOIN
             Categoria C ON L.idCategoria = C.id
         WHERE
-            %(i)s = L.id
+            L.id = %(i)s
     """
 
     print("+-----------------+")
@@ -1233,3 +1233,70 @@ def anadir_estudiante(conn):
             else:
                 print_generic_error(e)
             conn.rollback()
+
+
+def consultar_estudiante(conn):
+    """
+    Consulta un estudiante en la base de datos. Pide al usuario el id del estudiante.
+    :param conn: La conexión abierta a la BD
+    :return: Nada
+    """
+
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
+
+    sql_sentence = """
+        SELECT 
+            E.nombre,
+            E.apellidos,
+            E.curso,
+            E.email,
+            E.telefono,
+            (
+                SELECT count(*) 
+                FROM Prestamo P 
+                WHERE P.idEstudiante = E.id
+                AND P.fechaDevolucion IS NULL
+            ) as librosEnPosesion
+        FROM
+            Estudiante E
+        WHERE
+             E.id = %(i)s
+    """
+
+    print("+----------------------+")
+    print("| Consultar estudiante |")
+    print("+----------------------+")
+
+    sid_estudiante = input("Id del estudiante: ")
+    try:
+        id_estudiante = int(sid_estudiante)
+    except ValueError:
+        print("Error: El id del estudiante debe ser un número entero.")
+        return
+
+    with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+        try:
+            cur.execute(sql_sentence, {
+                'i': id_estudiante,
+            })
+
+            estudiante = cur.fetchone()
+
+            if estudiante is None:
+                print("No se ha encontrado el estudiante.")
+                return
+
+            print(f"Id: {id_estudiante}")
+            print(f"Nombre: {estudiante['nombre']}")
+            print(f"Apellidos: {estudiante['apellidos']}")
+            print(f"Curso: {estudiante['curso']}")
+            print(f"Email: {estudiante['email']}")
+            print(f"Telefono: {estudiante['telefono']}")
+            print(f"Libros en posesion: {estudiante['librosEnPosesion']}")
+
+        except psycopg2.Error as e:
+            print_generic_error(e)
+            conn.rollback()
+
+
+
