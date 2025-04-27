@@ -902,7 +902,7 @@ def ver_historial_prestamos_libro(conn):
         WHERE   
             P.idLibro = %(i)s
         ORDER BY 
-            P.fechaPrestamo DESC;
+            P.fechaPrestamo DESC
     """
 
     print("+-------------------------------------+")
@@ -930,7 +930,7 @@ def ver_historial_prestamos_libro(conn):
 
             for prestamo in prestamos:
                 print(f"Fecha de prestamo: {prestamo['fechaPrestamo'].date()}")
-                print(f"Fecha de devolucion: {prestamo['fechaDevolucion'].date() if prestamo['fechaDevolucion'] else 'No devolucionado'}")
+                print(f"Fecha de devolucion: {prestamo['fechaDevolucion'].date() if prestamo['fechaDevolucion'] else 'No devuelto'}")
                 print(f"Comentarios: {prestamo['comentarios']}")
                 print(f"Id del estudiante: {prestamo['idEstudiante']}")
                 print(f"Estudiante: {prestamo['nombreEstudiante']}")
@@ -939,4 +939,62 @@ def ver_historial_prestamos_libro(conn):
             print_generic_error(e)
             conn.rollback()
 
+
+def ver_historial_prestamos_estudiante(conn):
+    """
+    Muestra el historial de prestamos de un estudiante. Pide al usuario el id del estudiante.
+    :param conn: La conexión abierta a la BD
+    :return: Nada
+    """
+
+    sql_sentence = """
+        SELECT 
+            P.fechaPrestamo, 
+            P.fechaDevolucion, 
+            P.comentarios, 
+            P.idLibro,
+            L.libro as nombreLibro
+        FROM 
+            Prestamo P
+        JOIN 
+            Libro L ON L.id = P.idLibro
+        WHERE   
+            P.idEstudiante = %(i)s
+        ORDER BY 
+            P.fechaPrestamo DESC
+    """
+
+    print("+------------------------------------------+")
+    print("| Ver historial de prestamos de estudiante |")
+    print("+------------------------------------------+")
+
+    sid_estudiante = input("Id del estudiante: ")
+    try:
+        id_estudiante = None if sid_estudiante == "" else int(sid_estudiante)
+    except ValueError:
+        print("Error: El id del estudiante debe ser un número entero.")
+        return
+
+    with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+        try:
+            cur.execute(sql_sentence, {
+                'i': id_estudiante,
+            })
+
+            prestamos = cur.fetchall()
+
+            if not prestamos:
+                print("Error: El estudiante no tiene prestamos registrados.")
+                return
+
+            for prestamo in prestamos:
+                print(f"Fecha de prestamo: {prestamo['fechaPrestamo'].date()}")
+                print(f"Fecha de devolucion: {prestamo['fechaDevolucion'].date() if prestamo['fechaDevolucion'] else 'No devuelto'}")
+                print(f"Comentarios: {prestamo['comentarios']}")
+                print(f"Id del libro: {prestamo['idLibro']}")
+                print(f"Libro: {prestamo['nombreLibro']}")
+
+        except psycopg2.Error as e:
+            print_generic_error(e)
+            conn.rollback()
 
