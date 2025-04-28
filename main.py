@@ -4,7 +4,11 @@ import psycopg2.extensions
 import psycopg2.extras
 import psycopg2.errorcodes
 
-def print_generic_error(e): print(f"Error: {getattr(e, 'pgcode', 'Unknown')} - {getattr(e, 'pgerror', 'Unknown error')}")
+def print_generic_error(e): print(f"\nError: {getattr(e, 'pgcode', 'Unknown')} - {getattr(e, 'pgerror', 'Unknown error')}")
+
+def press_enter_to_continue(): input("\nPresione enter para continuar...")
+
+def perror(e_str): print(f"\nError: {e_str.strip()}")
 
 
 def connect_db():
@@ -49,11 +53,12 @@ def anadir_libro(conn):
             (%(t)s, %(a)s, %(ap)s, %(i)s, %(s)s, %(ic)s)
     """
 
-    print("+--------------+")
+    print("\n+--------------+")
     print("| Anadir libro |")
-    print("+--------------+")
+    print("+--------------+\n")
+    print("ADVERTENCIA: * = obligatorio.\n")
 
-    stitulo = input("Titulo: ").strip()
+    stitulo = input("Titulo*: ").strip()
     titulo = None if stitulo == "" else stitulo
 
     sautor = input("Autor: ").strip()
@@ -63,7 +68,8 @@ def anadir_libro(conn):
     try:
         anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
     except ValueError:
-        print("Error: El anio de publicacion debe ser un numero entero.")
+        print("El anio de publicacion debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     sisbn = input("ISBN: ").strip()
@@ -76,7 +82,8 @@ def anadir_libro(conn):
     try:
         id_categoria = None if sid_categoria == "" else int(sid_categoria)
     except ValueError:
-        print("Error: El id de categoria debe ser un numero entero.")
+        perror("El id de categoria debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     with conn.cursor() as cur:
@@ -91,27 +98,30 @@ def anadir_libro(conn):
             })
             
             conn.commit()
-            print("Libro anadido correctamente.")
+            print("\nLibro anadido correctamente.")
+            press_enter_to_continue()
             
         except psycopg2.Error as e:
+            conn.rollback()
             if e.pgcode == psycopg2.errorcodes.UNIQUE_VIOLATION:
-                print("Error: ISBN ya existe en otro libro.")
+                perror("El ISBN ya existe en otro libro.")
             elif e.pgcode == psycopg2.errorcodes.FOREIGN_KEY_VIOLATION:
-                print(f"Error: Categoria especificada no existe.")
+                print(f"\nError: Categoria especificada no existe.")
             elif e.pgcode == psycopg2.errorcodes.NOT_NULL_VIOLATION:
-                print("Error: El titulo es obligatorio.")
+                perror("El titulo es obligatorio.")
             elif e.pgcode == psycopg2.errorcodes.STRING_DATA_RIGHT_TRUNCATION:
                 if e.diag.column_name == "titulo":
-                    print("Error: El titulo es demasiado largo.")
+                    perror("El titulo es demasiado largo.")
                 elif e.diag.column_name == "autor":
-                    print("Error: El nombre de autor es demasiado largo.")
+                    perror("El nombre de autor es demasiado largo.")
                 elif e.diag.column_name == "isbn":
-                    print("Error: El ISBN es demasiado largo.")
+                    perror("El ISBN es demasiado largo.")
                 elif e.diag.column_name == "sinopsis":
-                    print("Error: La sinopsis es demasiado larga.")
+                    perror("La sinopsis es demasiado larga.")
             else:
-                print_generic_error(e) 
-            conn.rollback()
+                print_generic_error(e)
+            press_enter_to_continue()
+
             
 # 2
 def buscar_libros(conn):
@@ -159,9 +169,9 @@ def buscar_libros(conn):
             or l.idcategoria = %(ic)s) 
     """
 
-    print("+--------------+")
-    print("| Buscar libro |")
-    print("+--------------+")
+    print("\n+---------------+")
+    print("| Buscar libros |")
+    print("+---------------+\n")
 
     stitulo = input("Titulo: ")
     titulo = None if stitulo == "" else stitulo
@@ -173,7 +183,8 @@ def buscar_libros(conn):
     try:
         anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
     except ValueError:
-        print("Error: El anio de publicacion debe ser un numero entero.")
+        perror("El anio de publicacion debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     sisbn = input("ISBN: ")
@@ -183,7 +194,8 @@ def buscar_libros(conn):
     try:
         id_categoria = None if sid_categoria == "" else int(sid_categoria)
     except ValueError:
-        print("Error: El id de categoria debe ser un numero entero.")
+        perror("El id de categoria debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
@@ -202,26 +214,29 @@ def buscar_libros(conn):
             libros = cur.fetchall()
             
             if len(libros) == 0:
-                print("No se han encontrado libros.")
+                print("\nNo se han encontrado libros.")
+                press_enter_to_continue()
                 return
             
-            print(f"Se han encontrado {len(libros)} libros.")
+            print(f"\nSe han encontrado {len(libros)} libros:")
             
             for libro in libros:
-                print(f"ID: {libro['id']}")
+                print(f"\nID: {libro['id']}")
                 print(f"Titulo: {libro['titulo']}")
                 print(f"Autor: {libro['autor']}")
                 print(f"Anio de publicacion: {libro['aniopublicacion']}")
                 print(f"ISBN: {libro['isbn']}")
                 print(f"Categoria: {libro['nombrecategoria']}")
-                print(
-                    f"Precio actual: {libro['precioactual'] if libro['precioactual'] is not None else 'Sin precio registrado'} €")
+                print(f"Precio actual (€): {libro['precioactual'] if libro['precioactual'] is not None else 'Sin precio registrado'}")
                 print(f"Disponibilidad: {'Disponible' if libro['disponible'] else 'No disponible'}")
-        
+
+            press_enter_to_continue()
+
         except psycopg2.Error as e:
-            print_generic_error(e)
             conn.rollback()
-            
+            print_generic_error(e)
+            press_enter_to_continue()
+
 # 3
 def consultar_libro(conn):
     """
@@ -260,15 +275,16 @@ def consultar_libro(conn):
             l.id = %(i)s
     """
 
-    print("+-----------------+")
+    print("\n+-----------------+")
     print("| Consultar libro |")
-    print("+-----------------+")
+    print("+-----------------+\n")
 
     sid_libro = input("Id del libro: ")
     try:
         id_libro = int(sid_libro)
     except ValueError:
-        print("Error: El id del libro debe ser un numero entero.")
+        perror("El id del libro debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
@@ -280,10 +296,11 @@ def consultar_libro(conn):
             libro = cur.fetchone()
             
             if libro is None:
-                print("No se ha encontrado el libro.")
+                perror("No se ha encontrado el libro.")
+                press_enter_to_continue()
                 return
             
-            print(f"Id: {id_libro}")
+            print(f"\nId: {id_libro}")
             print(f"Titulo: {libro['titulo']}")
             print(f"Autor: {libro['autor']}")
             print(f"Anio de publicacion: {libro['aniopublicacion']}")
@@ -291,13 +308,15 @@ def consultar_libro(conn):
             print(f"Sinopsis: {libro['sinopsis']}")
             print(f"Id de categoria: {libro['idcategoria']}")
             print(f"Categoria: {libro['nombrecategoria']}")
-            print(
-                f"Precio actual: {libro['precioactual'] if libro['precioactual'] is not None else 'Sin precio registrado'} €")
+            print(f"Precio actual (€): {libro['precioactual'] if libro['precioactual'] is not None else 'Sin precio registrado'}")
             print(f"Disponibilidad: {'Disponible' if libro['disponible'] else 'No disponible'}")
+
+            press_enter_to_continue()
         
         except psycopg2.Error as e:
-            print_generic_error(e)
             conn.rollback()
+            print_generic_error(e)
+            press_enter_to_continue()
 
 # 4
 def modificar_libro(conn):
@@ -331,7 +350,7 @@ def modificar_libro(conn):
         update
             libro
         set     
-            aniopublicacion = %(aP)s
+            aniopublicacion = %(ap)s
         where 
             id = %(i)s
     """
@@ -358,7 +377,7 @@ def modificar_libro(conn):
         update
             libro
         set 
-            idcategoria = %(iC)s
+            idcategoria = %(ic)s
         where 
             id = %(i)s
     """
@@ -370,15 +389,16 @@ def modificar_libro(conn):
             (%(i)s, %(p)s) 
     """
 
-    print("+-----------------+")
+    print("\n+-----------------+")
     print("| Modificar libro |")
-    print("+-----------------+")
+    print("+-----------------+\n")
 
     sid_libro = input("Id del libro: ").strip()
     try:
         id_libro = int(sid_libro)
     except ValueError:
-        print("Error: El id del libro debe ser un numero entero.")
+        perror("El id del libro debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
@@ -406,11 +426,12 @@ def modificar_libro(conn):
                 try:
                     anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
                 except ValueError:
-                    print("Error: El anio de publicacion debe ser un numero entero.")
+                    perror("El anio de publicacion debe ser un numero entero.")
+                    press_enter_to_continue()
                     return
 
                 cur.execute(sql_update_anio_publicacion, {
-                    'aP': anio_publicacion,
+                    'ap': anio_publicacion,
                     'i': id_libro
                 })
 
@@ -437,12 +458,12 @@ def modificar_libro(conn):
                 id_categoria = None if sid_categoria == "" else int(sid_categoria)
 
                 cur.execute(sql_update_categoria, {
-                    'iC': id_categoria,
+                    'ic': id_categoria,
                     'i': id_libro
                 })
 
             if input("Modificar precio? (s/n): ").strip().lower() == "s":
-                sprecio = input("Nuevo precio: ").strip()
+                sprecio = input("Nuevo precio (€): ").strip()
                 precio = None if sprecio == "" else float(sprecio)
 
                 cur.execute(sql_update_precio, {
@@ -451,29 +472,31 @@ def modificar_libro(conn):
                 })
 
             conn.commit()
+            press_enter_to_continue()
 
         except psycopg2.Error as e:
+            conn.rollback()
             if e.pgcode == psycopg2.errorcodes.NOT_NULL_VIOLATION:
-                print("Error: El titulo no puede ser nulo.")
+                perror("El titulo no puede ser nulo.")
             elif e.pgcode == psycopg2.errorcodes.STRING_DATA_RIGHT_TRUNCATION:
                 if e.diag.column_name == "titulo":
-                    print("Error: El titulo es demasiado largo.")
+                    perror("El titulo es demasiado largo.")
                 elif e.diag.column_name == "autor":
-                    print("Error: El nombre de autor es demasiado largo.")
+                    perror("El nombre de autor es demasiado largo.")
                 elif e.diag.column_name == "isbn":
-                    print("Error: El ISBN es demasiado largo.")
+                    perror("El ISBN es demasiado largo.")
                 elif e.diag.column_name == "sinopsis":
-                    print("Error: La sinopsis es demasiado larga.")
+                    perror("La sinopsis es demasiado larga.")
             elif e.pgcode == psycopg2.errorcodes.FOREIGN_KEY_VIOLATION:
                 if e.diag.column_name == "idCategoria":
-                    print(f"Error: Categoria especificada no existe.")
+                    print(f"\nError: Categoria especificada no existe.")
                 elif e.diag.column_name == "idLibro":
-                    print(f"Error: Libro especificado no existe.")
+                    print(f"\nError: Libro especificado no existe.")
             elif e.pgcode == psycopg2.errorcodes.NUMERIC_VALUE_OUT_OF_RANGE:
-                print(f"Error: el precio es demasiado alto.")
+                print(f"\nError: el precio es demasiado alto.")
             else:
                 print_generic_error(e)
-            conn.rollback()
+            press_enter_to_continue()
 
 # 5
 def eliminar_libro(conn):
@@ -491,15 +514,16 @@ def eliminar_libro(conn):
             id = %(i)s
     """
 
-    print("+----------------+")
+    print("\n+----------------+")
     print("| Eliminar libro |")
-    print("+----------------+")
+    print("+----------------+\n")
 
     sid_libro = input("Id del libro: ")
     try:
         id_libro = None if sid_libro == "" else int(sid_libro)
     except ValueError:
-        print("Error: El id del libro debe ser un numero entero.")
+        perror("El id del libro debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     with conn.cursor() as cur:
@@ -509,15 +533,18 @@ def eliminar_libro(conn):
             })
 
             if cur.rowcount == 0:
-                print(f"El libro con id {id_libro} no existe.")
                 conn.rollback()
+                perror("El libro con id {id_libro} no existe.")
             else:
-                print("Libro eliminado correctamente.")
                 conn.commit()
+                print("\nLibro eliminado correctamente.")
 
+            press_enter_to_continue()
+            
         except psycopg2.Error as e:
-            print_generic_error(e)
             conn.rollback()
+            print_generic_error(e)
+            press_enter_to_continue()
 
 # 6
 def actualizar_precio(conn):
@@ -552,15 +579,16 @@ def actualizar_precio(conn):
             1
     """
 
-    print("+----------------------------+")
+    print("\n+----------------------------+")
     print("| Actualizar precio de libro |")
-    print("+----------------------------+")
+    print("+----------------------------+\n")
 
     sid_libro = input("Id del libro: ")
     try:
         id_libro = None if sid_libro == "" else int(sid_libro)
     except ValueError:
-        print("Error: El id del librodebe ser un numero entero.")
+        perror("El id del libro debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
 
@@ -576,7 +604,7 @@ def actualizar_precio(conn):
                 })
 
             else:
-                sprecio = input("Nuevo precio: ")
+                sprecio = input("Nuevo precio (€): ")
                 precio = None if sprecio == "" else float(sprecio)
 
                 cur.execute(sql_aumento_manual, {
@@ -584,19 +612,21 @@ def actualizar_precio(conn):
                     'p': precio
                 })
 
-            print("Precio actualizado correctamente.")
             conn.commit()
+            print("\nPrecio actualizado correctamente.")
+            press_enter_to_continue()
 
         except psycopg2.Error as e:
+            conn.rollback()
             if e.pgcode == psycopg2.errorcodes.NOT_NULL_VIOLATION:
-                print("Error: El precio no puede ser nulo.")
+                perror("El precio no puede ser nulo.")
             elif e.pgcode == psycopg2.errorcodes.NUMERIC_VALUE_OUT_OF_RANGE:
-                print(f"Error: el precio es demasiado alto.")
+                print(f"\nError: el precio es demasiado alto.")
             elif e.pgcode == psycopg2.errorcodes.FOREIGN_KEY_VIOLATION:
-                print(f"Error: Libro especificado no existe.")
+                print(f"\nError: Libro especificado no existe.")
             else:
                 print_generic_error(e)
-            conn.rollback()
+            press_enter_to_continue()
 
 # 7
 def ver_historial_precios(conn):
@@ -618,15 +648,16 @@ def ver_historial_precios(conn):
         fecha desc
     """
 
-    print("+-----------------------------------+")
+    print("\n+-----------------------------------+")
     print("| Ver historial de precios de libro |")
-    print("+-----------------------------------+")
+    print("+-----------------------------------+\n")
 
     sid_libro = input("Id del libro: ")
     try:
         id_libro = None if sid_libro == "" else int(sid_libro)
     except ValueError:
-        print("Error: El id del librodebe ser un numero entero.")
+        perror("El id del libro debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
@@ -638,15 +669,17 @@ def ver_historial_precios(conn):
             precios = cur.fetchall()
 
             if not precios:
-                print("Error: El libro no tiene un precio registrado.")
+                perror("El libro no tiene un precio registrado.")
                 return
 
             for precio in precios:
                 print(f"{precio['fecha'].date()} -> {precio['precio']:.2f} €")
 
+            press_enter_to_continue()
+
         except psycopg2.Error as e:
-            print_generic_error(e)
             conn.rollback()
+            print_generic_error(e)
 
 # 8
 def anadir_categoria(conn):
@@ -663,9 +696,9 @@ def anadir_categoria(conn):
             (%(n)s, %(d)s)
     """
 
-    print("+------------------+")
+    print("\n+------------------+")
     print("| Anadir categoria |")
-    print("+------------------+")
+    print("+------------------+\n")
 
     snombre = input("Nombre: ")
     nombre = None if snombre == "" else snombre
@@ -681,24 +714,26 @@ def anadir_categoria(conn):
             })
 
             conn.commit()
-            print("Categoria anadida correctamente.")
+            print("\nCategoria anadida correctamente.")
+            press_enter_to_continue()
 
         except psycopg2.Error as e:
+            conn.rollback()
             if e.pgcode == psycopg2.errorcodes.UNIQUE_VIOLATION:
-                print("Error: Una categoria con ese nombre ya existe.")
+                perror("Una categoria con ese nombre ya existe.")
             elif e.pgcode == psycopg2.errorcodes.NOT_NULL_VIOLATION:
                 if e.diag.column_name == "nombre":
-                    print("Error: El nombre no puede ser nulo.")
+                    perror("El nombre no puede ser nulo.")
                 elif e.diag.column_name == "descripcion":
-                    print("Error: La descripcion no puede ser nula.")
+                    perror("La descripcion no puede ser nula.")
             elif e.pgcode == psycopg2.errorcodes.STRING_DATA_RIGHT_TRUNCATION:
                 if e.diag.column_name == "nombre":
-                    print("Error: El nombre es demasiado largo.")
+                    perror("El nombre es demasiado largo.")
                 elif e.diag.column_name == "descripcion":
-                    print("Error: La descripcion es demasiado larga.")
+                    perror("La descripcion es demasiado larga.")
             else:
                 print_generic_error(e)
-            conn.rollback()
+            press_enter_to_continue()
 
 # 9
 def modificar_categoria(conn):
@@ -728,15 +763,16 @@ def modificar_categoria(conn):
             id = %(i)s
     """
 
-    print("+---------------------+")
+    print("\n+---------------------+")
     print("| Modificar categoria |")
-    print("+---------------------+")
+    print("+---------------------+\n")
 
     sid_categoria = input("Id de la categoria: ").strip()
     try:
         id_categoria = int(sid_categoria)
     except ValueError:
-        print("Error: El id de la categoria debe ser un numero entero.")
+        perror("El id de la categoria debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
@@ -759,20 +795,25 @@ def modificar_categoria(conn):
                     'i': id_categoria
                 })
 
+            conn.commit()
+            print("\nCategoria modificada correctamente.")
+            press_enter_to_continue()
+
         except psycopg2.Error as e:
+            conn.rollback()
             if e.pgcode == psycopg2.errorcodes.NOT_NULL_VIOLATION:
                 if e.diag.column_name == "nombre":
-                    print("Error: El nombre no puede ser nulo.")
+                    perror("El nombre no puede ser nulo.")
                 elif e.diag.column_name == "descripcion":
-                    print("Error: La descripcion no puede ser nula.")
+                    perror("La descripcion no puede ser nula.")
             elif e.pgcode == psycopg2.errorcodes.STRING_DATA_RIGHT_TRUNCATION:
                 if e.diag.column_name == "nombre":
-                    print("Error: El nombre es demasiado largo.")
+                    perror("El nombre es demasiado largo.")
                 elif e.diag.column_name == "descripcion":
-                    print("Error: La descripcion es demasiado larga.")
+                    perror("La descripcion es demasiado larga.")
             else:
                 print_generic_error(e)
-            conn.rollback()
+            press_enter_to_continue()
 
 # 10
 def eliminar_categoria(conn):
@@ -789,15 +830,16 @@ def eliminar_categoria(conn):
             id = %(i)s
     """
 
-    print("+--------------------+")
+    print("\n+--------------------+")
     print("| Eliminar categoria |")
-    print("+--------------------+")
+    print("+--------------------+\n")
 
     sid_categoria = input("Id de la categoria: ")
     try:
         id_categoria = int(sid_categoria)
     except ValueError:
-        print("Error: El id de la categoria debe ser un numero entero.")
+        perror("El id de la categoria debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     with conn.cursor() as cur:
@@ -807,15 +849,18 @@ def eliminar_categoria(conn):
             })
 
             if cur.rowcount == 0:
-                print(f"La categoria con id {id_categoria} no existe.")
                 conn.rollback()
+                print(f"La categoria con id {id_categoria} no existe.")
             else:
-                print("Categoria eliminada correctamente.")
                 conn.commit()
+                print("Categoria eliminada correctamente.")
+
+            press_enter_to_continue()
 
         except psycopg2.Error as e:
-            print_generic_error(e)
             conn.rollback()
+            print_generic_error(e)
+            press_enter_to_continue()
 
 # 11
 def efectuar_prestamo(conn):
@@ -830,9 +875,9 @@ def efectuar_prestamo(conn):
         values (now(), %(c)s, %(il)s, %(ie)s)
     """
 
-    print("+-------------------+")
+    print("\n+-------------------+")
     print("| Efectuar prestamo |")
-    print("+-------------------+")
+    print("+-------------------+\n")
 
     scomentarios = input("Comentarios: ").strip()
     comentarios = None if scomentarios == "" else scomentarios
@@ -841,14 +886,16 @@ def efectuar_prestamo(conn):
     try:
         id_libro = None if sid_libro == "" else int(sid_libro)
     except ValueError:
-        print("Error: El id del libro debe ser un numero entero.")
+        perror("El id del libro debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     sid_estudiante = input("Id del estudiante: ").strip()
     try:
         id_estudiante = None if sid_estudiante == "" else int(sid_estudiante)
     except ValueError:
-        print("Error: El id del estudiante debe ser un numero entero.")
+        perror("El id del estudiante debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     with conn.cursor() as cur:
@@ -861,18 +908,20 @@ def efectuar_prestamo(conn):
 
             conn.commit()
             print("Prestamo efectuado correctamente.")
+            press_enter_to_continue()
 
         except psycopg2.Error as e:
+            conn.rollback()
             if e.pgcode == psycopg2.errorcodes.FOREIGN_KEY_VIOLATION:
                 if e.diag.column_name == "idLibro":
-                    print(f"Error: Libro especificado no existe.")
+                    perror("Libro especificado no existe.")
                 elif e.diag.column_name == "idEstudiante":
-                    print(f"Error: Estudiante especificado no existe.")
+                    perror("Estudiante especificado no existe.")
             elif e.pgcode == psycopg2.errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                print("Error: El comentario es demasiado largo.")
+                perror("El comentario es demasiado largo.")
             else:
                 print_generic_error(e)
-            conn.rollback()
+            press_enter_to_continue()
 
 # 12
 def ver_historial_prestamos_libro(conn):
@@ -899,15 +948,16 @@ def ver_historial_prestamos_libro(conn):
             p.fechaprestamo desc
     """
 
-    print("+-------------------------------------+")
+    print("\n+-------------------------------------+")
     print("| Ver historial de prestamos de libro |")
-    print("+-------------------------------------+")
+    print("+-------------------------------------+\n")
 
     sid_libro = input("Id del libro: ")
     try:
         id_libro = None if sid_libro == "" else int(sid_libro)
     except ValueError:
-        print("Error: El id del libro debe ser un numero entero.")
+        perror("El id del libro debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
@@ -919,19 +969,23 @@ def ver_historial_prestamos_libro(conn):
             prestamos = cur.fetchall()
 
             if not prestamos:
-                print("Error: El libro no tiene prestamos registrados.")
+                perror("El libro no tiene prestamos registrados.")
+                press_enter_to_continue()
                 return
 
             for prestamo in prestamos:
-                print(f"Fecha de prestamo: {prestamo['fechaPrestamo'].date()}")
+                print(f"\nFecha de prestamo: {prestamo['fechaPrestamo'].date()}")
                 print(f"Fecha de devolucion: {prestamo['fechaDevolucion'].date() if prestamo['fechaDevolucion'] else 'No devuelto'}")
                 print(f"Comentarios: {prestamo['comentarios']}")
                 print(f"Id del estudiante: {prestamo['idEstudiante']}")
                 print(f"Estudiante: {prestamo['nombreEstudiante']}")
 
+            press_enter_to_continue()
+
         except psycopg2.Error as e:
-            print_generic_error(e)
             conn.rollback()
+            print_generic_error(e)
+            press_enter_to_continue()
 
 # 13
 def ver_historial_prestamos_estudiante(conn):
@@ -958,15 +1012,16 @@ def ver_historial_prestamos_estudiante(conn):
             p.fechaprestamo desc
     """
 
-    print("+------------------------------------------+")
+    print("\n+------------------------------------------+")
     print("| Ver historial de prestamos de estudiante |")
-    print("+------------------------------------------+")
+    print("+------------------------------------------+\n")
 
     sid_estudiante = input("Id del estudiante: ")
     try:
         id_estudiante = None if sid_estudiante == "" else int(sid_estudiante)
     except ValueError:
-        print("Error: El id del estudiante debe ser un numero entero.")
+        perror("El id del estudiante debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
@@ -978,19 +1033,23 @@ def ver_historial_prestamos_estudiante(conn):
             prestamos = cur.fetchall()
 
             if not prestamos:
-                print("Error: El estudiante no tiene prestamos registrados.")
+                perror("El estudiante no tiene prestamos registrados.")
+                press_enter_to_continue()
                 return
 
             for prestamo in prestamos:
-                print(f"Fecha de prestamo: {prestamo['fechaprestamo'].date()}")
+                print(f"\nFecha de prestamo: {prestamo['fechaprestamo'].date()}")
                 print(f"Fecha de devolucion: {prestamo['fechadevolucion'].date() if prestamo['fechadevolucion'] else 'No devuelto'}")
                 print(f"Comentarios: {prestamo['comentarios']}")
                 print(f"Id del libro: {prestamo['idlibro']}")
                 print(f"Libro: {prestamo['nombrelibro']}")
 
+            press_enter_to_continue()
+
         except psycopg2.Error as e:
-            print_generic_error(e)
             conn.rollback()
+            print_generic_error(e)
+            press_enter_to_continue()
 
 # 14
 def consultar_prestamo(conn):
@@ -1019,15 +1078,16 @@ def consultar_prestamo(conn):
             p.id = %(i)s
     """
 
-    print("+--------------------+")
+    print("\n+--------------------+")
     print("| Consultar prestamo |")
-    print("+--------------------+")
+    print("+--------------------+\n")
 
     sid_prestamo = input("Id del prestamo: ")
     try:
         id_prestamo = int(sid_prestamo)
     except ValueError:
-        print("Error: El id del prestamo debe ser un numero entero.")
+        perror("El id del prestamo debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
@@ -1039,13 +1099,13 @@ def consultar_prestamo(conn):
             prestamo = cur.fetchone()
 
             if prestamo is None:
-                print("No se ha encontrado el prestamo.")
+                perror("No se ha encontrado el prestamo.")
+                press_enter_to_continue()
                 return
 
-            print(f"Id: {id_prestamo}")
+            print(f"\nId: {id_prestamo}")
             print(f"Fecha del prestamo: {prestamo['fechaprestamo'].date()}")
-            print(
-                f"Fecha de devolucion: {prestamo['fechadevolucion'].date() if prestamo['fechadevolucion'] else 'No devuelto'}")
+            print(f"Fecha de devolucion: {prestamo['fechadevolucion'].date() if prestamo['fechadevolucion'] else 'No devuelto'}")
             print(f"Comentarios: {prestamo['comentarios']}")
             print(f"Id del libro: {prestamo['idlibro']}")
             print(f"Libro: {prestamo['nombrelibro']}")
@@ -1053,8 +1113,9 @@ def consultar_prestamo(conn):
             print(f"Estudiante: {prestamo['nombreestudiante']}")
 
         except psycopg2.Error as e:
-            print_generic_error(e)
             conn.rollback()
+            print_generic_error(e)
+            press_enter_to_continue()
 
 # 15
 def finalizar_prestamo(conn):
@@ -1075,15 +1136,16 @@ def finalizar_prestamo(conn):
             id = %(i)s
     """
 
-    print("+--------------------+")
+    print("\n+--------------------+")
     print("| Finalizar prestamo |")
-    print("+--------------------+")
+    print("+--------------------+\n")
 
     sid_prestamo = input("Id del prestamo: ")
     try:
         id_prestamo = int(sid_prestamo)
     except ValueError:
-        print("Error: El id del prestamo debe ser un numero entero.")
+        perror("El id del prestamo debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     with conn.cursor() as cur:
@@ -1093,16 +1155,18 @@ def finalizar_prestamo(conn):
             })
 
             if cur.rowcount == 0:
-                print("No se ha encontrado el prestamo.")
                 conn.rollback()
+                perror("No se ha encontrado el prestamo.")
+                press_enter_to_continue()
                 return
 
             conn.commit()
-            print("Prestamo finalizado correctamente.")
+            print("\nPrestamo finalizado correctamente.")
 
         except psycopg2.Error as e:
-            print_generic_error(e)
             conn.rollback()
+            print_generic_error(e)
+            press_enter_to_continue()
 
 # 16
 def eliminar_prestamo(conn):
@@ -1119,15 +1183,16 @@ def eliminar_prestamo(conn):
             id = %(i)s
     """
 
-    print("+-------------------+")
+    print("\n+-------------------+")
     print("| Eliminar prestamo |")
-    print("+-------------------+")
+    print("+-------------------+\n")
 
     sid_prestamo = input("Id del prestamo: ")
     try:
         id_prestamo = None if sid_prestamo == "" else int(sid_prestamo)
     except ValueError:
-        print("Error: El id del prestamo debe ser un numero entero.")
+        perror("El id del prestamo debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     with conn.cursor() as cur:
@@ -1137,15 +1202,18 @@ def eliminar_prestamo(conn):
             })
 
             if cur.rowcount == 0:
-                print(f"El prestamo con id {id_prestamo} no existe.")
                 conn.rollback()
+                perror(f"El prestamo con id {id_prestamo} no existe.")
             else:
-                print("Prestamo eliminado correctamente.")
                 conn.commit()
+                print("Prestamo eliminado correctamente.")
+
+            press_enter_to_continue()
 
         except psycopg2.Error as e:
-            print_generic_error(e)
             conn.rollback()
+            print_generic_error(e)
+            press_enter_to_continue()
 
 # 17
 def anadir_estudiante(conn):
@@ -1160,9 +1228,9 @@ def anadir_estudiante(conn):
         values (%(n)s, %(a)s, %(c)s, %(e)s, %(t)s)
     """
 
-    print("+-------------------+")
+    print("\n+-------------------+")
     print("| Anadir estudiante |")
-    print("+-------------------+")
+    print("+-------------------+\n")
 
     snombre = input("Nombre: ").strip()
     nombre = None if snombre == "" else snombre
@@ -1174,7 +1242,8 @@ def anadir_estudiante(conn):
     try:
         curso = None if scurso == "" else int(scurso)
     except ValueError:
-        print("Error: El curso debe ser un numero entero.")
+        perror("El curso debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     semail = input("Email: ").strip()
@@ -1195,34 +1264,36 @@ def anadir_estudiante(conn):
 
             conn.commit()
             print("Estudiante anadido correctamente.")
+            press_enter_to_continue()
 
         except psycopg2.Error as e:
+            conn.rollback()
             if e.pgcode == psycopg2.errorcodes.UNIQUE_VIOLATION:
                 if e.diag.column_name == "email":
-                    print("Error: El email ya existe.")
+                    perror("El email ya existe.")
                 elif e.diag.column_name == "telefono":
-                    print("Error: El telefono ya existe.")
+                    perror("El telefono ya existe.")
             elif e.pgcode == psycopg2.errorcodes.NOT_NULL_VIOLATION:
                 if e.diag.column_name == "nombre":
-                    print("Error: El nombre no puede ser nulo.")
+                    perror("El nombre no puede ser nulo.")
                 elif e.diag.column_name == "apellidos":
-                    print("Error: Los apellidos no pueden ser nulos.")
+                    perror("Los apellidos no pueden ser nulos.")
                 elif e.diag.column_name == "curso":
-                    print("Error: El curso no puede ser nulo.")
+                    perror("El curso no puede ser nulo.")
                 elif e.diag.column_name == "email":
-                    print("Error: El email no puede ser nulo.")
+                    perror("El email no puede ser nulo.")
             elif e.pgcode == psycopg2.errorcodes.STRING_DATA_RIGHT_TRUNCATION:
                 if e.diag.column_name == "nombre":
-                    print("Error: El nombre es demasiado largo.")
+                    perror("El nombre es demasiado largo.")
                 elif e.diag.column_name == "apellidos":
-                    print("Error: Los apellidos son demasiado largos.")
+                    perror("Los apellidos son demasiado largos.")
                 elif e.diag.column_name == "email":
-                    print("Error: El email es demasiado largo.")
+                    perror("El email es demasiado largo.")
                 elif e.diag.column_name == "telefono":
-                    print("Error: El telefono es demasiado largo.")
+                    perror("El telefono es demasiado largo.")
             else:
                 print_generic_error(e)
-            conn.rollback()
+            press_enter_to_continue()
 
 # 18
 def consultar_estudiante(conn):
@@ -1251,15 +1322,16 @@ def consultar_estudiante(conn):
              e.id = %(i)s
     """
 
-    print("+----------------------+")
+    print("\n+----------------------+")
     print("| Consultar estudiante |")
-    print("+----------------------+")
+    print("+----------------------+\n")
 
     sid_estudiante = input("Id del estudiante: ")
     try:
         id_estudiante = int(sid_estudiante)
     except ValueError:
-        print("Error: El id del estudiante debe ser un numero entero.")
+        perror("El id del estudiante debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
@@ -1271,10 +1343,11 @@ def consultar_estudiante(conn):
             estudiante = cur.fetchone()
 
             if estudiante is None:
-                print("No se ha encontrado el estudiante.")
+                perror("No se ha encontrado el estudiante.")
+                press_enter_to_continue()
                 return
 
-            print(f"Id: {id_estudiante}")
+            print(f"\nId: {id_estudiante}")
             print(f"Nombre: {estudiante['nombre']}")
             print(f"Apellidos: {estudiante['apellidos']}")
             print(f"Curso: {estudiante['curso']}")
@@ -1283,8 +1356,9 @@ def consultar_estudiante(conn):
             print(f"Libros en posesion: {estudiante['librosenposesion']}")
 
         except psycopg2.Error as e:
-            print_generic_error(e)
             conn.rollback()
+            print_generic_error(e)
+            press_enter_to_continue()
 
 # 19
 def aumentar_curso(conn):
@@ -1305,10 +1379,9 @@ def aumentar_curso(conn):
             id = %(i)s
     """
 
-    print("+-------------------------------+")
+    print("\n+-------------------------------+")
     print("| Aumentar curso de estudiantes |")
-    print("+-------------------------------+")
-
+    print("+-------------------------------+\n")
 
     id_estudiantes = []
 
@@ -1319,7 +1392,7 @@ def aumentar_curso(conn):
         try:
             id_estudiantes.append(int(sid_estudiante))
         except ValueError:
-            print("El id del estudiante debe ser un numero entero.")
+            print("Error: El id del estudiante debe ser un numero entero.")
             continue
 
     with conn.cursor() as cur:
@@ -1336,12 +1409,14 @@ def aumentar_curso(conn):
                 else:
                     print(f"El estudiante con id {id_estudiante} no existe.")  # Continuamos igualmente
 
-            print(f"Curso aumentado correctamente a {actualizados} estudiantes.")
             conn.commit()
+            print(f"Curso aumentado correctamente a {actualizados} estudiantes.")
+            press_enter_to_continue()
 
         except psycopg2.Error as e:
-            print_generic_error(e)
             conn.rollback()
+            print_generic_error(e)
+            press_enter_to_continue()
 
 # 20
 def modificar_estudiante(conn):
@@ -1398,15 +1473,16 @@ def modificar_estudiante(conn):
             id = %(i)s
     """
 
-    print("+----------------------+")
+    print("\n+----------------------+")
     print("| Modificar estudiante |")
-    print("+----------------------+")
+    print("+----------------------+\n")
 
     sid_estudiante = input("Id del estudiante: ").strip()
     try:
         id_estudiante = int(sid_estudiante)
     except ValueError:
-        print("Error: El id del estudiante debe ser un numero entero.")
+        perror("El id del estudiante debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
@@ -1461,31 +1537,33 @@ def modificar_estudiante(conn):
                 })
 
             conn.commit()
+            press_enter_to_continue()
 
         except psycopg2.Error as e:
+            conn.rollback()
             if e.pgcode == psycopg2.errorcodes.NOT_NULL_VIOLATION:
                 if e.diag.column_name == "nombre":
-                    print("Error: El nombre no puede ser nulo.")
+                    perror("El nombre no puede ser nulo.")
                 elif e.diag.column_name == "apellidos":
-                    print("Error: Los apellidos no pueden ser nulos.")
+                    perror("Los apellidos no pueden ser nulos.")
                 elif e.diag.column_name == "curso":
-                    print("Error: El curso no puede ser nulo.")
+                    perror("El curso no puede ser nulo.")
                 elif e.diag.column_name == "email":
-                    print("Error: El email no puede ser nulo.")
+                    perror("El email no puede ser nulo.")
             elif e.pgcode == psycopg2.errorcodes.STRING_DATA_RIGHT_TRUNCATION:
                 if e.diag.column_name == "nombre":
-                    print("Error: El nombre es demasiado largo.")
+                    perror("El nombre es demasiado largo.")
                 elif e.diag.column_name == "apellidos":
-                    print("Error: Los apellidos son demasiado largos.")
+                    perror("Los apellidos son demasiado largos.")
                 elif e.diag.column_name == "email":
-                    print("Error: El email es demasiado largo.")
+                    perror("El email es demasiado largo.")
                 elif e.diag.column_name == "telefono":
-                    print("Error: El telefono es demasiado largo.")
+                    perror("El telefono es demasiado largo.")
             elif e.pgcode == psycopg2.errorcodes.NUMERIC_VALUE_OUT_OF_RANGE:
-                print("Error: El curso es demasiado grande.")
+                perror("El curso es demasiado grande.")
             else:
                 print_generic_error(e)
-            conn.rollback()
+            press_enter_to_continue()
 
 # 21
 def eliminar_estudiante(conn):
@@ -1501,15 +1579,16 @@ def eliminar_estudiante(conn):
         where id = %(i)s
     """
 
-    print("+---------------------+")
+    print("\n+---------------------+")
     print("| Eliminar estudiante |")
-    print("+---------------------+")
+    print("+---------------------+\n")
 
     sid_estudiante = input("Id del estudiante: ")
     try:
         id_estudiante = int(sid_estudiante)
     except ValueError:
-        print("Error: El id del estudiante debe ser un numero entero.")
+        perror("El id del estudiante debe ser un numero entero.")
+        press_enter_to_continue()
         return
 
     with conn.cursor() as cur:
@@ -1519,15 +1598,18 @@ def eliminar_estudiante(conn):
             })
 
             if cur.rowcount == 0:
-                print(f"El estudiante con id {id_estudiante} no existe.")
                 conn.rollback()
+                print(f"El estudiante con id {id_estudiante} no existe.")
             else:
-                print("Estudiante eliminado correctamente.")
                 conn.commit()
+                print("Estudiante eliminado correctamente.")
+
+            press_enter_to_continue()
 
         except psycopg2.Error as e:
-            print_generic_error(e)
             conn.rollback()
+            print_generic_error(e)
+            press_enter_to_continue()
 
 
 def menu(conn):
@@ -1537,6 +1619,7 @@ def menu(conn):
     """
 
     menu_text = """
+    \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n
                 +------+
                 | MENU |
                 +------+
