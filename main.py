@@ -459,8 +459,8 @@ def modificar_libro(conn):
                     'p': precio
                 })
 
-            conn.commit()
-            press_enter_to_continue()
+                conn.commit()
+                press_enter_to_continue()
 
         except psycopg2.Error as e:
             conn.rollback()
@@ -476,9 +476,9 @@ def modificar_libro(conn):
                 elif e.diag.column_name == "sinopsis":
                     perror("La sinopsis es demasiado larga.")
             elif e.pgcode == psycopg2.errorcodes.FOREIGN_KEY_VIOLATION:
-                if e.diag.column_name == "idCategoria":
+                if e.diag.column_name == "idcategoria":
                     perror("La categoria especificada no existe.")
-                elif e.diag.column_name == "idLibro":
+                elif e.diag.column_name == "idlibro":
                     perror("El libro especificado no existe.")
             elif e.pgcode == psycopg2.errorcodes.NUMERIC_VALUE_OUT_OF_RANGE:
                 perror("El precio es demasiado alto.")
@@ -885,9 +885,9 @@ def efectuar_prestamo(conn):
         except psycopg2.Error as e:
             conn.rollback()
             if e.pgcode == psycopg2.errorcodes.FOREIGN_KEY_VIOLATION:
-                if e.diag.column_name == "idLibro":
+                if e.diag.column_name == "idlibro":
                     perror("Libro especificado no existe.")
-                elif e.diag.column_name == "idEstudiante":
+                elif e.diag.column_name == "idestudiante":
                     perror("Estudiante especificado no existe.")
             elif e.pgcode == psycopg2.errorcodes.STRING_DATA_RIGHT_TRUNCATION:
                 perror("El comentario es demasiado largo.")
