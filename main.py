@@ -13,6 +13,11 @@ def perror(e_str): print(f"\nError: {e_str.strip()}")
 
 def pmessage(s_str): print(f"\n{s_str.strip()}")
 
+def ptitle(s_str):
+    s_str_strip = s_str.strip()
+    s_str_strip_len = len(s_str_strip)
+    print(f"\n\t+-{'-'*s_str_strip_len}-+\n\t| {s_str_strip} |\n\t+-{'-'*s_str_strip_len}-+\n")
+
 def get_string(prompt):
     res = input(prompt).strip()
     return None if res == "" else res
@@ -64,10 +69,8 @@ def anadir_libro(conn):
             (%(t)s, %(a)s, %(ap)s, %(i)s, %(s)s, %(ic)s)
     """
 
-    print("\n+--------------+")
-    print("| Anadir libro |")
-    print("+--------------+\n")
-    print("*: Obligatorio\n")
+    ptitle("Anadir libro")
+    pmessage("*: Obligatorio\n")
 
     titulo = get_string("Titulo*: ")
     autor = get_string("Autor: ")
@@ -169,10 +172,8 @@ def buscar_libros(conn):
             OR l.idcategoria = %(ic)s) 
     """
 
-    print("\n+---------------+")
-    print("| Buscar libros |")
-    print("+---------------+\n")
-    print("Los campos en blanco son ignorados\n")
+    ptitle("Buscar libros")
+    pmessage("Los campos en blanco son ignorados\n")
 
     titulo = get_string("Titulo: ")
     autor = get_string("Autor: ")
@@ -264,9 +265,7 @@ def consultar_libro(conn):
             l.id = %(i)s
     """
 
-    print("\n+-----------------+")
-    print("| Consultar libro |")
-    print("+-----------------+\n")
+    ptitle("Consultar libro")
 
     try:
         id_libro = get_parsed("Id del libro: ", int)
@@ -377,10 +376,8 @@ def modificar_libro(conn):
             (%(i)s, %(p)s) 
     """
 
-    print("\n+-----------------+")
-    print("| Modificar libro |")
-    print("+-----------------+\n")
-    print("Los campos en blanco son ignorados\n")
+    ptitle("Modificar libro")
+    pmessage("Los campos en blanco son ignorados\n")
 
     try:
         id_libro = get_parsed("Id del libro: ", int)
@@ -505,9 +502,7 @@ def eliminar_libro(conn):
             id = %(i)s
     """
 
-    print("\n+----------------+")
-    print("| Eliminar libro |")
-    print("+----------------+\n")
+    ptitle("Eliminar libro")
 
     try:
         id_libro = get_parsed("Id del libro: ", int)
@@ -569,9 +564,7 @@ def actualizar_precio(conn):
             1
     """
 
-    print("\n+----------------------------+")
-    print("| Actualizar precio de libro |")
-    print("+----------------------------+\n")
+    ptitle("Actualizar precio de libro")
 
     try:
         id_libro = get_parsed("Id del libro: ", int)
@@ -644,9 +637,7 @@ def ver_historial_precios(conn):
             fecha DESC
     """
 
-    print("\n+-----------------------------------+")
-    print("| Ver historial de precios de libro |")
-    print("+-----------------------------------+\n")
+    ptitle("Ver historial de precios de libro")
 
     try:
         id_libro = get_parsed("Id del libro: ", int)
@@ -692,10 +683,8 @@ def anadir_categoria(conn):
             (%(n)s, %(d)s)
     """
 
-    print("\n+------------------+")
-    print("| Anadir categoria |")
-    print("+------------------+\n")
-    print("*: Obligatorio\n")
+    ptitle("Anadir categoria")
+    pmessage("*: Obligatorio\n")
 
     nombre = get_string("Nombre*: ")
     descripcion = get_string("Descripcion*: ")
@@ -757,10 +746,8 @@ def modificar_categoria(conn):
             id = %(i)s
     """
 
-    print("\n+---------------------+")
-    print("| Modificar categoria |")
-    print("+---------------------+\n")
-    print("Los campos en blanco son ignorados\n")
+    ptitle("Modificar categoria")
+    pmessage("Los campos en blanco son ignorados\n")
 
     try:
         id_categoria = get_parsed("Id de la categoria: ", int)
@@ -822,9 +809,7 @@ def eliminar_categoria(conn):
             id = %(i)s
     """
 
-    print("\n+--------------------+")
-    print("| Eliminar categoria |")
-    print("+--------------------+\n")
+    ptitle("Eliminar categoria")
 
     try:
         id_categoria = get_parsed("Id de la categoria: ", int)
@@ -868,10 +853,8 @@ def efectuar_prestamo(conn):
             (NOW(), %(c)s, %(il)s, %(ie)s)
     """
 
-    print("\n+-------------------+")
-    print("| Efectuar prestamo |")
-    print("+-------------------+\n")
-    print("*: Obligatorio\n")
+    ptitle("Efectuar prestamo")
+    pmessage("*: Obligatorio\n")
 
     comentarios = get_string("Comentarios: ")
     try:
@@ -926,7 +909,7 @@ def ver_historial_prestamos_libro(conn):
             p.fechadevolucion, 
             p.comentarios, 
             p.idestudiante,
-            e.nombre AS nombreEstudiante
+            e.nombre AS nombreestudiante
         FROM 
             prestamo p
         JOIN 
@@ -937,9 +920,7 @@ def ver_historial_prestamos_libro(conn):
             p.fechaprestamo DESC
     """
 
-    print("\n+-------------------------------------+")
-    print("| Ver historial de prestamos de libro |")
-    print("+-------------------------------------+\n")
+    ptitle("Ver historial de prestamos de libro")
 
     try:
         id_libro = get_parsed("Id del libro: ", int)
@@ -962,11 +943,11 @@ def ver_historial_prestamos_libro(conn):
                 return
 
             for prestamo in prestamos:
-                print(f"\nFecha de prestamo: {prestamo['fechaPrestamo'].date()}")
-                print(f"Fecha de devolucion: {prestamo['fechaDevolucion'].date() if prestamo['fechaDevolucion'] else 'No devuelto'}")
+                print(f"\nFecha de prestamo: {prestamo['fechaprestamo'].date()}")
+                print(f"Fecha de devolucion: {prestamo['fechadevolucion'].date() if prestamo['fechadevolucion'] else 'No devuelto'}")
                 print(f"Comentarios: {prestamo['comentarios']}")
-                print(f"Id del estudiante: {prestamo['idEstudiante']}")
-                print(f"Estudiante: {prestamo['nombreEstudiante']}")
+                print(f"Id del estudiante: {prestamo['idestudiante']}")
+                print(f"Estudiante: {prestamo['nombreestudiante']}")
 
             press_enter_to_continue()
 
@@ -1000,9 +981,7 @@ def ver_historial_prestamos_estudiante(conn):
             p.fechaprestamo DESC
     """
 
-    print("\n+------------------------------------------+")
-    print("| Ver historial de prestamos de estudiante |")
-    print("+------------------------------------------+\n")
+    ptitle("Ver historial de prestamos de estudiante")
 
     try:
         id_estudiante = get_parsed("Id del estudiante: ", int)
@@ -1065,9 +1044,7 @@ def consultar_prestamo(conn):
             p.id = %(i)s
     """
 
-    print("\n+--------------------+")
-    print("| Consultar prestamo |")
-    print("+--------------------+\n")
+    ptitle("Consultar prestamo")
 
     try:
         id_prestamo = get_parsed("Id del prestamo: ", int)
@@ -1122,9 +1099,7 @@ def finalizar_prestamo(conn):
             id = %(i)s
     """
 
-    print("\n+--------------------+")
-    print("| Finalizar prestamo |")
-    print("+--------------------+\n")
+    ptitle("Finalizar prestamo")
 
     try:
         id_prestamo = get_parsed("Id del prestamo: ", int)
@@ -1168,9 +1143,7 @@ def eliminar_prestamo(conn):
             id = %(i)s
     """
 
-    print("\n+-------------------+")
-    print("| Eliminar prestamo |")
-    print("+-------------------+\n")
+    ptitle("Eliminar prestamo")
 
     try:
         id_prestamo = get_parsed("Id del prestamo: ", int)
@@ -1214,10 +1187,8 @@ def anadir_estudiante(conn):
             (%(n)s, %(a)s, %(c)s, %(e)s, %(t)s)
     """
 
-    print("\n+-------------------+")
-    print("| Anadir estudiante |")
-    print("+-------------------+\n")
-    print("*: Obligatorio\n")
+    ptitle("Anadir estudiante")
+    pmessage("*: Obligatorio\n")
 
     nombre = get_string("Nombre*: ")
     apellidos = get_string("Apellidos*: ")
@@ -1300,9 +1271,7 @@ def consultar_estudiante(conn):
              e.id = %(i)s
     """
 
-    print("\n+----------------------+")
-    print("| Consultar estudiante |")
-    print("+----------------------+\n")
+    ptitle("Consultar estudiante")
 
     try:
         id_estudiante = get_parsed(f"Id del estudiante: ", int)
@@ -1356,12 +1325,9 @@ def aumentar_curso(conn):
             id = %(i)s
     """
 
-    print("\n+-------------------------------+")
-    print("| Aumentar curso de estudiantes |")
-    print("+-------------------------------+\n")
+    ptitle("Aumentar curso de estudiantes")
 
     id_estudiantes = []
-
     while True:
         try:
             id_estudiante = get_parsed("Id del estudiante (o 'enter' para terminar): ", int)
@@ -1451,10 +1417,8 @@ def modificar_estudiante(conn):
             id = %(i)s
     """
 
-    print("\n+----------------------+")
-    print("| Modificar estudiante |")
-    print("+----------------------+\n")
-    print("Los campos en blanco son ignorados\n")
+    ptitle("Modificar estudiante")
+    pmessage("Los campos en blanco son ignorados\n")
 
     try:
         id_estudiante = get_parsed("Id del estudiante: ", int)
@@ -1554,9 +1518,7 @@ def eliminar_estudiante(conn):
             id = %(i)s
     """
 
-    print("\n+---------------------+")
-    print("| Eliminar estudiante |")
-    print("+---------------------+\n")
+    ptitle("Eliminar estudiante")
 
     try:
         id_estudiante = get_parsed("Id del estudiante: ", int)
@@ -1592,50 +1554,47 @@ def menu(conn):
     'q' para salir.
     """
 
-    menu_text = f"""
-    {"\n" * 20}
-                +------+
-                | MENU |
-                +------+
-              
-        [LIBROS]
-        1 - Anadir libro        
-        2 - Buscar libros por atributos    
-        3 - Consultar detalles de libro
-        4 - Modificar libro      
-        5 - Eliminar libro   
-         
-        [PRECIOS DE LIBROS]  
-        6 - Actualizar precio de libro
-        7 - Ver historial de precios de libro
-        
-        [CATEGORIAS]
-        8 - Anadir categoria
-        9 - Modificar categoria
-        10 - Eliminar categoria
-        
-        [PRESTAMOS]
-        11 - Efectuar prestamo
-        12 - Ver historial de prestamos de libro
-        13 - Ver historial de prestamos de estudiante
-        14 - Consultar prestamo
-        15 - Finalizar prestamo
-        16 - Eliminar prestamo
-        
-        [ESTUDIANTES]
-        17 - Anadir estudiante
-        18 - Consultar estudiante
-        19 - Aumentar curso de estudiantes
-        20 - Modificar estudiante
-        21 - Eliminar estudiante
-        
-        q - Salir
+    menu_text = f"""    [LIBROS]
+    1 - Anadir libro        
+    2 - Buscar libros por atributos    
+    3 - Consultar detalles de libro
+    4 - Modificar libro      
+    5 - Eliminar libro   
+     
+    [PRECIOS DE LIBROS]  
+    6 - Actualizar precio de libro
+    7 - Ver historial de precios de libro
+    
+    [CATEGORIAS]
+    8 - Anadir categoria
+    9 - Modificar categoria
+    10 - Eliminar categoria
+    
+    [PRESTAMOS]
+    11 - Efectuar prestamo
+    12 - Ver historial de prestamos de libro
+    13 - Ver historial de prestamos de estudiante
+    14 - Consultar prestamo
+    15 - Finalizar prestamo
+    16 - Eliminar prestamo
+    
+    [ESTUDIANTES]
+    17 - Anadir estudiante
+    18 - Consultar estudiante
+    19 - Aumentar curso de estudiantes
+    20 - Modificar estudiante
+    21 - Eliminar estudiante
+    
+    q - Salir
     """
     
     while True:
+        print(f"{'\n' * 32}")
+        ptitle("MENU")
         print(menu_text)
-        tecla = input("Opcion> ")
+        tecla = input("Opcion> ").strip()
         if tecla == 'q':
+            print("\nHasta pronto!\n")
             break
         elif tecla == '1':
             anadir_libro(conn)
