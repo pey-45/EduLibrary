@@ -1,14 +1,17 @@
 import sys
-from dbm.sqlite3 import GET_SIZE
-
 import psycopg2
 import psycopg2.extensions
 import psycopg2.extras
 import psycopg2.errorcodes
 
+
 def print_generic_error(e): print(f"\nError: {getattr(e, 'pgcode', 'Unknown')} - {getattr(e, 'pgerror', 'Unknown error')}")
 
 def press_enter_to_continue(): input("\nPresione enter para continuar...")
+
+def perror(e_str): print(f"\nError: {e_str.strip()}")
+
+def pmessage(s_str): print(f"\n{s_str.strip()}")
 
 def get_string(prompt):
     res = input(prompt).strip()
@@ -17,8 +20,6 @@ def get_string(prompt):
 def get_parsed(prompt, datatype):
     res = input(prompt)
     return None if res == "" else datatype(res)
-
-def perror(e_str): print(f"\nError: {e_str.strip()}")
 
 
 def connect_db():
@@ -73,7 +74,7 @@ def anadir_libro(conn):
     try:
         anio_publicacion = get_parsed("Anio de publicacion: ", int)
     except ValueError:
-        print("El anio de publicacion debe ser un numero entero.")
+        perror("El anio de publicacion debe ser un numero entero.")
         press_enter_to_continue()
         return
     isbn = get_string("ISBN: ")
@@ -97,7 +98,7 @@ def anadir_libro(conn):
             })
             
             conn.commit()
-            print("\nLibro anadido correctamente.")
+            pmessage("Libro anadido correctamente.")
             press_enter_to_continue()
             
         except psycopg2.Error as e:
@@ -105,7 +106,7 @@ def anadir_libro(conn):
             if e.pgcode == psycopg2.errorcodes.UNIQUE_VIOLATION:
                 perror("El ISBN ya existe en otro libro.")
             elif e.pgcode == psycopg2.errorcodes.FOREIGN_KEY_VIOLATION:
-                perror("Categoria especificada no existe.")
+                perror("La categoria especificada no existe.")
             elif e.pgcode == psycopg2.errorcodes.NOT_NULL_VIOLATION:
                 perror("El titulo es obligatorio.")
             elif e.pgcode == psycopg2.errorcodes.STRING_DATA_RIGHT_TRUNCATION:
@@ -171,7 +172,7 @@ def buscar_libros(conn):
     print("\n+---------------+")
     print("| Buscar libros |")
     print("+---------------+\n")
-    print("\nCampos en blanco son ignorados")
+    print("Los campos en blanco son ignorados\n")
 
     titulo = get_string("Titulo: ")
     autor = get_string("Autor: ")
@@ -192,21 +193,21 @@ def buscar_libros(conn):
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
             cur.execute(sql_sentence,{
-                't': f"%{titulo}%" if titulo is not None else None,
-                'a': f"%{autor}%" if autor is not None else None,
+                't': titulo,
+                'a': autor,
                 'ap': anio_publicacion,
-                'i': f"%{isbn}%" if isbn is not None else None,
+                'i': isbn,
                 'ic': id_categoria
             })
             
             libros = cur.fetchall()
             
             if len(libros) == 0:
-                print("\nNo se han encontrado libros.")
+                pmessage("No se han encontrado libros.")
                 press_enter_to_continue()
                 return
             
-            print(f"\nSe han encontrado {len(libros)} libros:")
+            pmessage(f"Se han encontrado {len(libros)} libros:")
             
             for libro in libros:
                 print(f"\nID: {libro['id']}")
@@ -379,6 +380,7 @@ def modificar_libro(conn):
     print("\n+-----------------+")
     print("| Modificar libro |")
     print("+-----------------+\n")
+    print("Los campos en blanco son ignorados\n")
 
     try:
         id_libro = get_parsed("Id del libro: ", int)
@@ -525,7 +527,7 @@ def eliminar_libro(conn):
                 perror("El libro con id {id_libro} no existe.")
             else:
                 conn.commit()
-                print("\nLibro eliminado correctamente.")
+                pmessage("Libro eliminado correctamente.")
 
             press_enter_to_continue()
             
@@ -607,7 +609,7 @@ def actualizar_precio(conn):
                 })
 
             conn.commit()
-            print("\nPrecio actualizado correctamente.")
+            pmessage("Precio actualizado correctamente.")
             press_enter_to_continue()
 
         except psycopg2.Error as e:
@@ -665,6 +667,7 @@ def ver_historial_precios(conn):
                 perror("El libro no tiene un precio registrado.")
                 return
 
+            print()
             for precio in precios:
                 print(f"{precio['fecha'].date()} -> {precio['precio']:.2f} €")
 
@@ -692,9 +695,10 @@ def anadir_categoria(conn):
     print("\n+------------------+")
     print("| Anadir categoria |")
     print("+------------------+\n")
+    print("*: Obligatorio\n")
 
-    nombre = get_string("Nombre: ")
-    descripcion = get_string("Descripcion: ")
+    nombre = get_string("Nombre*: ")
+    descripcion = get_string("Descripcion*: ")
 
     with conn.cursor() as cur:
         try:
@@ -704,7 +708,7 @@ def anadir_categoria(conn):
             })
 
             conn.commit()
-            print("\nCategoria anadida correctamente.")
+            pmessage("Categoria anadida correctamente.")
             press_enter_to_continue()
 
         except psycopg2.Error as e:
@@ -756,6 +760,7 @@ def modificar_categoria(conn):
     print("\n+---------------------+")
     print("| Modificar categoria |")
     print("+---------------------+\n")
+    print("Los campos en blanco son ignorados\n")
 
     try:
         id_categoria = get_parsed("Id de la categoria: ", int)
@@ -783,7 +788,7 @@ def modificar_categoria(conn):
                 })
 
             conn.commit()
-            print("\nCategoria modificada correctamente.")
+            pmessage("Categoria modificada correctamente.")
             press_enter_to_continue()
 
         except psycopg2.Error as e:
@@ -836,10 +841,10 @@ def eliminar_categoria(conn):
 
             if cur.rowcount == 0:
                 conn.rollback()
-                print(f"\nLa categoria con id {id_categoria} no existe.")
+                pmessage(f"La categoria con id {id_categoria} no existe.")
             else:
                 conn.commit()
-                print("\nCategoria eliminada correctamente.")
+                pmessage("Categoria eliminada correctamente.")
 
             press_enter_to_continue()
 
@@ -866,6 +871,7 @@ def efectuar_prestamo(conn):
     print("\n+-------------------+")
     print("| Efectuar prestamo |")
     print("+-------------------+\n")
+    print("*: Obligatorio\n")
 
     comentarios = get_string("Comentarios: ")
     try:
@@ -890,7 +896,7 @@ def efectuar_prestamo(conn):
             })
 
             conn.commit()
-            print("\nPrestamo efectuado correctamente.")
+            pmessage("Prestamo efectuado correctamente.")
             press_enter_to_continue()
 
         except psycopg2.Error as e:
@@ -1140,7 +1146,7 @@ def finalizar_prestamo(conn):
                 return
 
             conn.commit()
-            print("\nPrestamo finalizado correctamente.")
+            pmessage("Prestamo finalizado correctamente.")
 
         except psycopg2.Error as e:
             conn.rollback()
@@ -1184,7 +1190,7 @@ def eliminar_prestamo(conn):
                 perror(f"El prestamo con id {id_prestamo} no existe.")
             else:
                 conn.commit()
-                print("\nPrestamo eliminado correctamente.")
+                pmessage("Prestamo eliminado correctamente.")
 
             press_enter_to_continue()
 
@@ -1211,16 +1217,17 @@ def anadir_estudiante(conn):
     print("\n+-------------------+")
     print("| Anadir estudiante |")
     print("+-------------------+\n")
+    print("*: Obligatorio\n")
 
-    nombre = get_string("Nombre: ")
-    apellidos = get_string("Apellidos: ")
+    nombre = get_string("Nombre*: ")
+    apellidos = get_string("Apellidos*: ")
     try:
-        curso = get_parsed("Curso: ", int)
+        curso = get_parsed("Curso*: ", int)
     except ValueError:
         perror("El curso debe ser un numero entero.")
         press_enter_to_continue()
         return
-    email = get_string("Email: ")
+    email = get_string("Email*: ")
     telefono = get_string("Telefono (+XX XXX XX XX XX): ")
 
     with conn.cursor() as cur:
@@ -1234,7 +1241,7 @@ def anadir_estudiante(conn):
             })
 
             conn.commit()
-            print("\nEstudiante anadido correctamente.")
+            pmessage("Estudiante anadido correctamente.")
             press_enter_to_continue()
 
         except psycopg2.Error as e:
@@ -1381,7 +1388,7 @@ def aumentar_curso(conn):
                     print(f"El estudiante con id {id_estudiante} no existe.")  # Continuamos igualmente
 
             conn.commit()
-            print(f"\nCurso aumentado correctamente a {actualizados} estudiantes.")
+            pmessage(f"Curso aumentado correctamente a {actualizados} estudiantes.")
             press_enter_to_continue()
 
         except psycopg2.Error as e:
@@ -1447,6 +1454,7 @@ def modificar_estudiante(conn):
     print("\n+----------------------+")
     print("| Modificar estudiante |")
     print("+----------------------+\n")
+    print("Los campos en blanco son ignorados\n")
 
     try:
         id_estudiante = get_parsed("Id del estudiante: ", int)
@@ -1568,7 +1576,7 @@ def eliminar_estudiante(conn):
                 perror(f"El estudiante con id {id_estudiante} no existe.")
             else:
                 conn.commit()
-                print("\nEstudiante eliminado correctamente.")
+                pmessage("Estudiante eliminado correctamente.")
 
             press_enter_to_continue()
 
