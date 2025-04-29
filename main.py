@@ -459,8 +459,8 @@ def modificar_libro(conn):
                     'p': precio
                 })
 
-                conn.commit()
-                press_enter_to_continue()
+            conn.commit()
+            press_enter_to_continue()
 
         except psycopg2.Error as e:
             conn.rollback()
