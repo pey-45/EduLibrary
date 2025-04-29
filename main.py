@@ -1,4 +1,6 @@
 import sys
+from dbm.sqlite3 import GET_SIZE
+
 import psycopg2
 import psycopg2.extensions
 import psycopg2.extras
@@ -7,6 +9,14 @@ import psycopg2.errorcodes
 def print_generic_error(e): print(f"\nError: {getattr(e, 'pgcode', 'Unknown')} - {getattr(e, 'pgerror', 'Unknown error')}")
 
 def press_enter_to_continue(): input("\nPresione enter para continuar...")
+
+def get_string(prompt):
+    res = input(prompt).strip()
+    return None if res == "" else res
+
+def get_parsed(prompt, datatype):
+    res = input(prompt)
+    return None if res == "" else datatype(res)
 
 def perror(e_str): print(f"\nError: {e_str.strip()}")
 
@@ -47,40 +57,29 @@ def anadir_libro(conn):
     """
 
     sql_sentence = """
-        insert into 
+        INSERT INTO 
             libro (titulo, autor, aniopublicacion, isbn, sinopsis, idcategoria)
-        values
+        VALUES
             (%(t)s, %(a)s, %(ap)s, %(i)s, %(s)s, %(ic)s)
     """
 
     print("\n+--------------+")
     print("| Anadir libro |")
     print("+--------------+\n")
-    print("ADVERTENCIA: * = obligatorio.\n")
+    print("*: Obligatorio\n")
 
-    stitulo = input("Titulo*: ").strip()
-    titulo = None if stitulo == "" else stitulo
-
-    sautor = input("Autor: ").strip()
-    autor = None if sautor == "" else sautor
-
-    sanio_publicacion = input("Anio de publicacion: ").strip()
+    titulo = get_string("Titulo*: ")
+    autor = get_string("Autor: ")
     try:
-        anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
+        anio_publicacion = get_parsed("Anio de publicacion: ", int)
     except ValueError:
         print("El anio de publicacion debe ser un numero entero.")
         press_enter_to_continue()
         return
-
-    sisbn = input("ISBN: ").strip()
-    isbn = None if sisbn == "" else sisbn
-
-    ssinopsis = input("Sinopsis: ").strip()
-    sinopsis = None if ssinopsis == "" else ssinopsis
-
-    sid_categoria = input("Id de categoria: ").strip()
+    isbn = get_string("ISBN: ")
+    sinopsis = get_string("Sinopsis: ")
     try:
-        id_categoria = None if sid_categoria == "" else int(sid_categoria)
+        id_categoria = get_parsed("Id de categoria: ", int)
     except ValueError:
         perror("El id de categoria debe ser un numero entero.")
         press_enter_to_continue()
@@ -106,7 +105,7 @@ def anadir_libro(conn):
             if e.pgcode == psycopg2.errorcodes.UNIQUE_VIOLATION:
                 perror("El ISBN ya existe en otro libro.")
             elif e.pgcode == psycopg2.errorcodes.FOREIGN_KEY_VIOLATION:
-                print(f"\nError: Categoria especificada no existe.")
+                perror("Categoria especificada no existe.")
             elif e.pgcode == psycopg2.errorcodes.NOT_NULL_VIOLATION:
                 perror("El titulo es obligatorio.")
             elif e.pgcode == psycopg2.errorcodes.STRING_DATA_RIGHT_TRUNCATION:
@@ -132,67 +131,59 @@ def buscar_libros(conn):
     """
 
     sql_sentence = """
-        select 
+        SELECT 
             l.id,
             l.titulo,
             l.autor,
             l.aniopublicacion,
             l.isbn,
-            c.nombre as nombrecategoria,
+            c.nombre AS nombrecategoria,
             (
-                select precio
-                from preciolibro
-                where idlibro = l.id
-                order by fecha desc
+                SELECT precio
+                FROM preciolibro
+                WHERE idlibro = l.id
+                ORDER BY fecha DESC
                 limit 1 
-            ) as precioactual,
-            not exists (
-                select 1
-                from prestamo p
-                where p.idlibro = l.id 
-                and p.fechadevolucion is null
-            ) as disponible
-        from
+            ) AS precioactual,
+            NOT EXISTS (
+                SELECT 1
+                FROM prestamo p
+                WHERE p.idlibro = l.id 
+                AND p.fechadevolucion IS NULL
+            ) AS disponible
+        FROM
             libro l
-        left join
-            categoria c on l.idcategoria = c.id
-        where
-            (%(t)s is null
-            or l.titulo ilike %(t0)s)
-            and (%(a)s is null
-            or l.autor ilike %(a0)s)
-            and (%(ap)s is null
-            or l.aniopublicacion = %(ap)s)
-            and (%(i)s is null
-            or l.isbn ilike %(i0)s)
-            and (%(ic)s is null
-            or l.idcategoria = %(ic)s) 
+        LEFT JOIN
+            categoria c ON l.idcategoria = c.id
+        WHERE
+            (%(t)s IS NULL
+            OR l.titulo ilike %(t)s)
+            AND (%(a)s IS NULL
+            OR l.autor ilike %(a)s)
+            AND (%(ap)s IS NULL
+            OR l.aniopublicacion = %(ap)s)
+            AND (%(i)s IS NULL
+            OR l.isbn ilike %(i)s)
+            AND (%(ic)s IS NULL
+            OR l.idcategoria = %(ic)s) 
     """
 
     print("\n+---------------+")
     print("| Buscar libros |")
     print("+---------------+\n")
+    print("\nCampos en blanco son ignorados")
 
-    stitulo = input("Titulo: ")
-    titulo = None if stitulo == "" else stitulo
-
-    sautor = input("Autor: ")
-    autor = None if sautor == "" else sautor
-
-    sanio_publicacion = input("Anio de publicacion: ")
+    titulo = get_string("Titulo: ")
+    autor = get_string("Autor: ")
     try:
-        anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
+        anio_publicacion = get_parsed("Anio de publicacion: ", int)
     except ValueError:
         perror("El anio de publicacion debe ser un numero entero.")
         press_enter_to_continue()
         return
-
-    sisbn = input("ISBN: ")
-    isbn = None if sisbn == "" else sisbn
-
-    sid_categoria = input("Id de categoria: ")
+    isbn = get_string("ISBN: ")
     try:
-        id_categoria = None if sid_categoria == "" else int(sid_categoria)
+        id_categoria = get_string("Id de categoria: ")
     except ValueError:
         perror("El id de categoria debe ser un numero entero.")
         press_enter_to_continue()
@@ -201,13 +192,10 @@ def buscar_libros(conn):
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
             cur.execute(sql_sentence,{
-                't': titulo,
-                't0': f"%{titulo}%" if titulo is not None else None,
-                'a': autor,
-                'a0': f"%{autor}%" if autor is not None else None,
+                't': f"%{titulo}%" if titulo is not None else None,
+                'a': f"%{autor}%" if autor is not None else None,
                 'ap': anio_publicacion,
-                'i': isbn,
-                'i0': f"%{isbn}%" if isbn is not None else None,
+                'i': f"%{isbn}%" if isbn is not None else None,
                 'ic': id_categoria
             })
             
@@ -246,32 +234,32 @@ def consultar_libro(conn):
     """
 
     sql_sentence = """
-        select 
+        SELECT 
             l.titulo,
             l.autor,
             l.aniopublicacion,
             l.isbn,
             l.sinopsis,
             l.idcategoria,
-            c.nombre as nombrecategoria,
+            c.nombre AS nombrecategoria,
             (
-                select precio
-                from preciolibro
-                where idlibro = l.id
-                order by fecha desc
+                SELECT precio
+                FROM preciolibro
+                WHERE idlibro = l.id
+                ORDER BY fecha DESC
                 limit 1 
-            ) as precioactual,
-            not exists (
-                select 1
-                from prestamo p
-                where p.idlibro = l.id
-                and p.fechadevolucion is null
-            ) as disponible
-        from
+            ) AS precioactual,
+            NOT EXISTS (
+                SELECT 1
+                FROM prestamo p
+                WHERE p.idlibro = l.id
+                AND p.fechadevolucion IS NULL
+            ) AS disponible
+        FROM
             libro l
-        left join
-            categoria c on l.idcategoria = c.id
-        where
+        LEFT JOIN
+            categoria c ON l.idcategoria = c.id
+        WHERE
             l.id = %(i)s
     """
 
@@ -279,9 +267,8 @@ def consultar_libro(conn):
     print("| Consultar libro |")
     print("+-----------------+\n")
 
-    sid_libro = input("Id del libro: ")
     try:
-        id_libro = int(sid_libro)
+        id_libro = get_parsed("Id del libro: ", int)
     except ValueError:
         perror("El id del libro debe ser un numero entero.")
         press_enter_to_continue()
@@ -329,63 +316,63 @@ def modificar_libro(conn):
     conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
     sql_update_titulo = """
-        update
+        UPDATE
             libro
-        set 
+        SET 
             titulo = %(t)s
-        where 
+        WHERE 
             id = %(i)s
     """
 
     sql_update_autor = """
-        update
+        UPDATE
             libro
-        set 
+        SET 
             autor = %(a)s
-        where 
+        WHERE 
             id = %(i)s
     """
 
     sql_update_anio_publicacion = """
-        update
+        UPDATE
             libro
-        set     
+        SET     
             aniopublicacion = %(ap)s
-        where 
+        WHERE 
             id = %(i)s
     """
 
     sql_update_isbn = """
-        update
+        UPDATE
             libro
-        set 
+        SET 
             isbn = %(isbn)s
-        where 
+        WHERE 
             id = %(i)s
     """
 
     sql_update_sinopsis = """
-        update
+        UPDATE
             libro
-        set
+        SET
             sinopsis = %(s)s
-        where 
+        WHERE 
             id = %(i)s
     """
 
     sql_update_categoria = """
-        update
+        UPDATE
             libro
-        set 
+        SET 
             idcategoria = %(ic)s
-        where 
+        WHERE 
             id = %(i)s
     """
 
     sql_update_precio = """
-        insert into 
+        INSERT INTO 
             preciolibro (idlibro, precio)
-        values 
+        VALUES 
             (%(i)s, %(p)s) 
     """
 
@@ -393,9 +380,8 @@ def modificar_libro(conn):
     print("| Modificar libro |")
     print("+-----------------+\n")
 
-    sid_libro = input("Id del libro: ").strip()
     try:
-        id_libro = int(sid_libro)
+        id_libro = get_parsed("Id del libro: ", int)
     except ValueError:
         perror("El id del libro debe ser un numero entero.")
         press_enter_to_continue()
@@ -404,8 +390,7 @@ def modificar_libro(conn):
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
             if input("Modificar titulo? (s/n): ").strip().lower() == "s":
-                stitulo = input("Nuevo titulo: ").strip()
-                titulo = None if stitulo == "" else stitulo
+                titulo = get_string("Nuevo titulo: ")
 
                 cur.execute(sql_update_titulo, {
                     't': titulo,
@@ -413,8 +398,7 @@ def modificar_libro(conn):
                 })
 
             if input("Modificar autor? (s/n): ").strip().lower() == "s":
-                sautor = input("Nuevo autor: ").strip()
-                autor = None if sautor == "" else sautor
+                autor = get_string("Nuevo autor: ")
 
                 cur.execute(sql_update_autor, {
                     'a': autor,
@@ -422,9 +406,8 @@ def modificar_libro(conn):
                 })
 
             if input("Modificar anio de publicacion? (s/n):").strip().lower() == "s":
-                sanio_publicacion = input("Nuevo anio de publicacion: ").strip()
                 try:
-                    anio_publicacion = None if sanio_publicacion == "" else int(sanio_publicacion)
+                    anio_publicacion = get_parsed("Nuevo anio de publicacion: ", int)
                 except ValueError:
                     perror("El anio de publicacion debe ser un numero entero.")
                     press_enter_to_continue()
@@ -436,8 +419,7 @@ def modificar_libro(conn):
                 })
 
             if input("Modificar ISBN? (s/n): ").strip().lower() == "s":
-                sisbn = input("Nuevo ISBN: ").strip()
-                isbn = None if sisbn == "" else sisbn
+                isbn = get_string("Nuevo ISBN: ")
 
                 cur.execute(sql_update_isbn, {
                     'isbn': isbn,
@@ -445,8 +427,7 @@ def modificar_libro(conn):
                 })
 
             if input("Modificar sinopsis? (s/n): ").strip().lower() == "s":
-                ssinopsis = input("Nueva sinopsis: ").strip()
-                sinopsis = None if ssinopsis == "" else ssinopsis
+                sinopsis = get_string("Nueva sinopsis: ")
 
                 cur.execute(sql_update_sinopsis, {
                     's': sinopsis,
@@ -454,8 +435,12 @@ def modificar_libro(conn):
                 })
 
             if input("Modificar categoria? (s/n): ").strip().lower() == "s":
-                sid_categoria = input("Nuevo id de categoria: ").strip()
-                id_categoria = None if sid_categoria == "" else int(sid_categoria)
+                try:
+                    id_categoria = get_parsed("Nuevo id de categoria: ", int)
+                except ValueError:
+                    perror("El id de categoria debe ser un numero entero.")
+                    press_enter_to_continue()
+                    return
 
                 cur.execute(sql_update_categoria, {
                     'ic': id_categoria,
@@ -463,8 +448,12 @@ def modificar_libro(conn):
                 })
 
             if input("Modificar precio? (s/n): ").strip().lower() == "s":
-                sprecio = input("Nuevo precio (€): ").strip()
-                precio = None if sprecio == "" else float(sprecio)
+                try:
+                    precio = get_parsed("Nuevo precio (€): ", float)
+                except ValueError:
+                    perror("El precio debe ser un numero real.")
+                    press_enter_to_continue()
+                    return
 
                 cur.execute(sql_update_precio, {
                     'i': id_libro,
@@ -489,11 +478,11 @@ def modificar_libro(conn):
                     perror("La sinopsis es demasiado larga.")
             elif e.pgcode == psycopg2.errorcodes.FOREIGN_KEY_VIOLATION:
                 if e.diag.column_name == "idCategoria":
-                    print(f"\nError: Categoria especificada no existe.")
+                    perror("La categoria especificada no existe.")
                 elif e.diag.column_name == "idLibro":
-                    print(f"\nError: Libro especificado no existe.")
+                    perror("El libro especificado no existe.")
             elif e.pgcode == psycopg2.errorcodes.NUMERIC_VALUE_OUT_OF_RANGE:
-                print(f"\nError: el precio es demasiado alto.")
+                perror("El precio es demasiado alto.")
             else:
                 print_generic_error(e)
             press_enter_to_continue()
@@ -507,10 +496,10 @@ def eliminar_libro(conn):
     """
 
     sql_sentence = """
-        delete
-        from 
+        DELETE
+        FROM 
             libro
-        where 
+        WHERE 
             id = %(i)s
     """
 
@@ -518,9 +507,8 @@ def eliminar_libro(conn):
     print("| Eliminar libro |")
     print("+----------------+\n")
 
-    sid_libro = input("Id del libro: ")
     try:
-        id_libro = None if sid_libro == "" else int(sid_libro)
+        id_libro = get_parsed("Id del libro: ", int)
     except ValueError:
         perror("El id del libro debe ser un numero entero.")
         press_enter_to_continue()
@@ -557,24 +545,24 @@ def actualizar_precio(conn):
     conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
     sql_aumento_manual = """
-        insert into 
+        INSERT INTO
             preciolibro (idlibro, precio)
-        values  
+        VALUES  
             (%(i)s, %(p)s)
     """
 
     sql_aumento_porcentaje = """
-        insert into 
+        INSERT INTO 
             preciolibro (idlibro, precio)
-        select 
+        SELECT 
             %(i)s,
             precio * (1 + %(p)s / 100.0)
-        from 
+        FROM 
             preciolibro
-        where 
+        WHERE 
             idlibro = %(i)s
-        order by 
-            fecha desc 
+        ORDER BY 
+            fecha DESC 
         limit 
             1
     """
@@ -583,20 +571,22 @@ def actualizar_precio(conn):
     print("| Actualizar precio de libro |")
     print("+----------------------------+\n")
 
-    sid_libro = input("Id del libro: ")
     try:
-        id_libro = None if sid_libro == "" else int(sid_libro)
+        id_libro = get_parsed("Id del libro: ", int)
     except ValueError:
         perror("El id del libro debe ser un numero entero.")
         press_enter_to_continue()
         return
 
-
     with conn.cursor() as cur:
         try:
             if input("Aumentar precio con porcentaje? (s/n): ").lower() == "s":
-                sporcentaje = input("Porcentaje de aumento/descuento (usar negativo para descuento): ")
-                porcentaje = None if sporcentaje == "" else float(sporcentaje)
+                try:
+                    porcentaje = get_parsed("Porcentaje de aumento/descuento (usar negativo para descuento): ", float)
+                except ValueError:
+                    perror("El porcentaje debe ser un numero real.")
+                    press_enter_to_continue()
+                    return
 
                 cur.execute(sql_aumento_porcentaje, {
                     'i': id_libro,
@@ -604,8 +594,12 @@ def actualizar_precio(conn):
                 })
 
             else:
-                sprecio = input("Nuevo precio (€): ")
-                precio = None if sprecio == "" else float(sprecio)
+                try:
+                    precio = get_parsed("Nuevo precio (€): ", float)
+                except ValueError:
+                    perror("El precio debe ser un numero real.")
+                    press_enter_to_continue()
+                    return
 
                 cur.execute(sql_aumento_manual, {
                     'i': id_libro,
@@ -621,9 +615,9 @@ def actualizar_precio(conn):
             if e.pgcode == psycopg2.errorcodes.NOT_NULL_VIOLATION:
                 perror("El precio no puede ser nulo.")
             elif e.pgcode == psycopg2.errorcodes.NUMERIC_VALUE_OUT_OF_RANGE:
-                print(f"\nError: el precio es demasiado alto.")
+                perror("El precio es demasiado alto.")
             elif e.pgcode == psycopg2.errorcodes.FOREIGN_KEY_VIOLATION:
-                print(f"\nError: Libro especificado no existe.")
+                perror("El libro especificado no existe.")
             else:
                 print_generic_error(e)
             press_enter_to_continue()
@@ -637,24 +631,23 @@ def ver_historial_precios(conn):
     """
 
     sql_sentence = """
-    select 
-        precio,
-        fecha
-    from 
-        preciolibro
-    where 
-        idlibro = %(i)s
-    order by 
-        fecha desc
+        SELECT 
+            precio,
+            fecha
+        FROM 
+            preciolibro
+        WHERE 
+            idlibro = %(i)s
+        ORDER BY
+            fecha DESC
     """
 
     print("\n+-----------------------------------+")
     print("| Ver historial de precios de libro |")
     print("+-----------------------------------+\n")
 
-    sid_libro = input("Id del libro: ")
     try:
-        id_libro = None if sid_libro == "" else int(sid_libro)
+        id_libro = get_parsed("Id del libro: ", int)
     except ValueError:
         perror("El id del libro debe ser un numero entero.")
         press_enter_to_continue()
@@ -690,9 +683,9 @@ def anadir_categoria(conn):
     """
 
     sql_sentence = """
-        insert into 
+        INSERT INTO
             categoria (nombre, descripcion)
-        values 
+        VALUES 
             (%(n)s, %(d)s)
     """
 
@@ -700,11 +693,8 @@ def anadir_categoria(conn):
     print("| Anadir categoria |")
     print("+------------------+\n")
 
-    snombre = input("Nombre: ")
-    nombre = None if snombre == "" else snombre
-
-    sdescripcion = input("Descripcion: ")
-    descripcion = None if sdescripcion == "" else sdescripcion
+    nombre = get_string("Nombre: ")
+    descripcion = get_string("Descripcion: ")
 
     with conn.cursor() as cur:
         try:
@@ -746,20 +736,20 @@ def modificar_categoria(conn):
     conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
     sql_update_nombre = """
-        update 
+        UPDATE 
             categoria 
-        set 
+        SET 
             nombre = %(n)s 
-        where 
+        WHERE 
             id = %(i)s
     """
 
     sql_update_descripcion = """
-        update 
+        UPDATE 
             categoria  
-        set 
+        SET 
             descripcion = %(d)s 
-        where 
+        WHERE 
             id = %(i)s
     """
 
@@ -767,9 +757,8 @@ def modificar_categoria(conn):
     print("| Modificar categoria |")
     print("+---------------------+\n")
 
-    sid_categoria = input("Id de la categoria: ").strip()
     try:
-        id_categoria = int(sid_categoria)
+        id_categoria = get_parsed("Id de la categoria: ", int)
     except ValueError:
         perror("El id de la categoria debe ser un numero entero.")
         press_enter_to_continue()
@@ -778,8 +767,7 @@ def modificar_categoria(conn):
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
             if input("Modificar nombre? (s/n): ").strip().lower() == "s":
-                snombre = input("Nuevo nombre: ").strip()
-                nombre = None if snombre == "" else snombre
+                nombre = get_string("Nuevo nombre: ")
 
                 cur.execute(sql_update_nombre, {
                     'n': nombre,
@@ -787,8 +775,7 @@ def modificar_categoria(conn):
                 })
 
             if input("Modificar descripcion? (s/n): ").strip().lower() == "s":
-                sdescripcion = input("Nueva descripcion: ").strip()
-                descripcion = None if sdescripcion == "" else sdescripcion
+                descripcion = get_string("Nueva descripcion: ")
 
                 cur.execute(sql_update_descripcion, {
                     'd': descripcion,
@@ -824,9 +811,9 @@ def eliminar_categoria(conn):
     """
 
     sql_sentence = """
-        delete from
+        DELETE FROM
             categoria 
-        where
+        WHERE
             id = %(i)s
     """
 
@@ -834,9 +821,8 @@ def eliminar_categoria(conn):
     print("| Eliminar categoria |")
     print("+--------------------+\n")
 
-    sid_categoria = input("Id de la categoria: ")
     try:
-        id_categoria = int(sid_categoria)
+        id_categoria = get_parsed("Id de la categoria: ", int)
     except ValueError:
         perror("El id de la categoria debe ser un numero entero.")
         press_enter_to_continue()
@@ -850,10 +836,10 @@ def eliminar_categoria(conn):
 
             if cur.rowcount == 0:
                 conn.rollback()
-                print(f"La categoria con id {id_categoria} no existe.")
+                print(f"\nLa categoria con id {id_categoria} no existe.")
             else:
                 conn.commit()
-                print("Categoria eliminada correctamente.")
+                print("\nCategoria eliminada correctamente.")
 
             press_enter_to_continue()
 
@@ -871,28 +857,25 @@ def efectuar_prestamo(conn):
     """
 
     sql_sentence = """
-        insert into prestamo (fechaprestamo, comentarios, idlibro, idestudiante)
-        values (now(), %(c)s, %(il)s, %(ie)s)
+        INSERT INTO 
+            prestamo (fechaprestamo, comentarios, idlibro, idestudiante)
+        VALUES 
+            (NOW(), %(c)s, %(il)s, %(ie)s)
     """
 
     print("\n+-------------------+")
     print("| Efectuar prestamo |")
     print("+-------------------+\n")
 
-    scomentarios = input("Comentarios: ").strip()
-    comentarios = None if scomentarios == "" else scomentarios
-
-    sid_libro = input("Id del libro: ").strip()
+    comentarios = get_string("Comentarios: ")
     try:
-        id_libro = None if sid_libro == "" else int(sid_libro)
+        id_libro = get_parsed("Id del libro: ", int)
     except ValueError:
         perror("El id del libro debe ser un numero entero.")
         press_enter_to_continue()
         return
-
-    sid_estudiante = input("Id del estudiante: ").strip()
     try:
-        id_estudiante = None if sid_estudiante == "" else int(sid_estudiante)
+        id_estudiante = get_parsed("Id del estudiante: ", int)
     except ValueError:
         perror("El id del estudiante debe ser un numero entero.")
         press_enter_to_continue()
@@ -907,7 +890,7 @@ def efectuar_prestamo(conn):
             })
 
             conn.commit()
-            print("Prestamo efectuado correctamente.")
+            print("\nPrestamo efectuado correctamente.")
             press_enter_to_continue()
 
         except psycopg2.Error as e:
@@ -932,29 +915,28 @@ def ver_historial_prestamos_libro(conn):
     """
 
     sql_sentence = """
-        select 
+        SELECT 
             p.fechaprestamo, 
             p.fechadevolucion, 
             p.comentarios, 
             p.idestudiante,
-            e.nombre as nombreEstudiante
-        from 
+            e.nombre AS nombreEstudiante
+        FROM 
             prestamo p
-        join 
-            estudiante e on e.id = p.idestudiante
-        where   
+        JOIN 
+            estudiante e ON e.id = p.idestudiante
+        WHERE   
             p.idlibro = %(i)s
-        order by 
-            p.fechaprestamo desc
+        ORDER BY
+            p.fechaprestamo DESC
     """
 
     print("\n+-------------------------------------+")
     print("| Ver historial de prestamos de libro |")
     print("+-------------------------------------+\n")
 
-    sid_libro = input("Id del libro: ")
     try:
-        id_libro = None if sid_libro == "" else int(sid_libro)
+        id_libro = get_parsed("Id del libro: ", int)
     except ValueError:
         perror("El id del libro debe ser un numero entero.")
         press_enter_to_continue()
@@ -996,29 +978,28 @@ def ver_historial_prestamos_estudiante(conn):
     """
 
     sql_sentence = """
-        select 
+        SELECT 
             p.fechaprestamo, 
             p.fechadevolucion, 
             p.comentarios, 
             p.idlibro,
-            l.titulo as nombrelibro
-        from 
+            l.titulo AS nombrelibro
+        FROM 
             prestamo p
-        join 
-            libro l on l.id = p.idlibro
-        where   
+        JOIN 
+            libro l ON l.id = p.idlibro
+        WHERE   
             p.idestudiante = %(i)s
-        order by 
-            p.fechaprestamo desc
+        ORDER BY
+            p.fechaprestamo DESC
     """
 
     print("\n+------------------------------------------+")
     print("| Ver historial de prestamos de estudiante |")
     print("+------------------------------------------+\n")
 
-    sid_estudiante = input("Id del estudiante: ")
     try:
-        id_estudiante = None if sid_estudiante == "" else int(sid_estudiante)
+        id_estudiante = get_parsed("Id del estudiante: ", int)
     except ValueError:
         perror("El id del estudiante debe ser un numero entero.")
         press_enter_to_continue()
@@ -1060,21 +1041,21 @@ def consultar_prestamo(conn):
     """
 
     sql_sentence = """
-        select 
+        SELECT 
             p.fechaprestamo, 
             p.fechadevolucion, 
             p.comentarios, 
             p.idlibro,
-            l.titulo as nombrelibro,
+            l.titulo AS nombrelibro,
             p.idestudiante,
-            e.nombre as nombreestudiante
-        from 
+            e.nombre AS nombreestudiante
+        FROM 
             prestamo p
-        join 
-            libro l on l.id = p.idlibro
-        join 
-            estudiante e on e.id = p.idestudiante
-        where 
+        JOIN 
+            libro l ON l.id = p.idlibro
+        JOIN 
+            estudiante e ON e.id = p.idestudiante
+        WHERE 
             p.id = %(i)s
     """
 
@@ -1082,9 +1063,8 @@ def consultar_prestamo(conn):
     print("| Consultar prestamo |")
     print("+--------------------+\n")
 
-    sid_prestamo = input("Id del prestamo: ")
     try:
-        id_prestamo = int(sid_prestamo)
+        id_prestamo = get_parsed("Id del prestamo: ", int)
     except ValueError:
         perror("El id del prestamo debe ser un numero entero.")
         press_enter_to_continue()
@@ -1128,11 +1108,11 @@ def finalizar_prestamo(conn):
     conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
     sql_sentence = """
-        update 
+        UPDATE 
             prestamo
-        set
-            fechadevolucion = now()
-        where
+        SET
+            fechadevolucion = NOW()
+        WHERE
             id = %(i)s
     """
 
@@ -1140,9 +1120,8 @@ def finalizar_prestamo(conn):
     print("| Finalizar prestamo |")
     print("+--------------------+\n")
 
-    sid_prestamo = input("Id del prestamo: ")
     try:
-        id_prestamo = int(sid_prestamo)
+        id_prestamo = get_parsed("Id del prestamo: ", int)
     except ValueError:
         perror("El id del prestamo debe ser un numero entero.")
         press_enter_to_continue()
@@ -1177,9 +1156,9 @@ def eliminar_prestamo(conn):
     """
 
     sql_sentence = """
-        delete from
+        DELETE FROM
             prestamo 
-        where 
+        WHERE 
             id = %(i)s
     """
 
@@ -1187,9 +1166,8 @@ def eliminar_prestamo(conn):
     print("| Eliminar prestamo |")
     print("+-------------------+\n")
 
-    sid_prestamo = input("Id del prestamo: ")
     try:
-        id_prestamo = None if sid_prestamo == "" else int(sid_prestamo)
+        id_prestamo = get_parsed("Id del prestamo: ", int)
     except ValueError:
         perror("El id del prestamo debe ser un numero entero.")
         press_enter_to_continue()
@@ -1206,7 +1184,7 @@ def eliminar_prestamo(conn):
                 perror(f"El prestamo con id {id_prestamo} no existe.")
             else:
                 conn.commit()
-                print("Prestamo eliminado correctamente.")
+                print("\nPrestamo eliminado correctamente.")
 
             press_enter_to_continue()
 
@@ -1224,33 +1202,26 @@ def anadir_estudiante(conn):
     """
 
     sql_sentence = """
-        insert into estudiante (nombre, apellidos, curso, email, telefono)
-        values (%(n)s, %(a)s, %(c)s, %(e)s, %(t)s)
+        INSERT INTO
+            estudiante (nombre, apellidos, curso, email, telefono)
+        VALUES 
+            (%(n)s, %(a)s, %(c)s, %(e)s, %(t)s)
     """
 
     print("\n+-------------------+")
     print("| Anadir estudiante |")
     print("+-------------------+\n")
 
-    snombre = input("Nombre: ").strip()
-    nombre = None if snombre == "" else snombre
-
-    sapellidos = input("Apellidos: ").strip()
-    apellidos = None if sapellidos == "" else sapellidos
-
-    scurso = input("Curso: ").strip()
+    nombre = get_string("Nombre: ")
+    apellidos = get_string("Apellidos: ")
     try:
-        curso = None if scurso == "" else int(scurso)
+        curso = get_parsed("Curso: ", int)
     except ValueError:
         perror("El curso debe ser un numero entero.")
         press_enter_to_continue()
         return
-
-    semail = input("Email: ").strip()
-    email = None if semail == "" else semail
-
-    stelefono = input("Telefono (+XX XXX XX XX XX): ").strip()
-    telefono = None if stelefono == "" else stelefono
+    email = get_string("Email: ")
+    telefono = get_string("Telefono (+XX XXX XX XX XX): ")
 
     with conn.cursor() as cur:
         try:
@@ -1263,7 +1234,7 @@ def anadir_estudiante(conn):
             })
 
             conn.commit()
-            print("Estudiante anadido correctamente.")
+            print("\nEstudiante anadido correctamente.")
             press_enter_to_continue()
 
         except psycopg2.Error as e:
@@ -1304,21 +1275,21 @@ def consultar_estudiante(conn):
     """
 
     sql_sentence = """
-        select 
+        SELECT 
             e.nombre,
             e.apellidos,
             e.curso,
             e.email,
             e.telefono,
             (
-                select count(*) 
-                from prestamo p 
-                where p.idestudiante = e.id
-                and p.fechadevolucion is null
-            ) as librosenposesion
-        from
+                SELECT count(*) 
+                FROM prestamo p 
+                WHERE p.idestudiante = e.id
+                AND p.fechadevolucion IS NULL
+            ) AS librosenposesion
+        FROM
             estudiante e
-        where
+        WHERE
              e.id = %(i)s
     """
 
@@ -1326,9 +1297,8 @@ def consultar_estudiante(conn):
     print("| Consultar estudiante |")
     print("+----------------------+\n")
 
-    sid_estudiante = input("Id del estudiante: ")
     try:
-        id_estudiante = int(sid_estudiante)
+        id_estudiante = get_parsed(f"Id del estudiante: ", int)
     except ValueError:
         perror("El id del estudiante debe ser un numero entero.")
         press_enter_to_continue()
@@ -1371,11 +1341,11 @@ def aumentar_curso(conn):
     conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
     sql_sentence = """
-        update
+        UPDATE
             estudiante
-        set 
+        SET 
             curso = curso + 1
-        where 
+        WHERE 
             id = %(i)s
     """
 
@@ -1386,19 +1356,19 @@ def aumentar_curso(conn):
     id_estudiantes = []
 
     while True:
-        sid_estudiante = input("Id del estudiante (o 'enter' para terminar): ").strip()
-        if sid_estudiante == "":
-            break
         try:
-            id_estudiantes.append(int(sid_estudiante))
+            id_estudiante = get_parsed("Id del estudiante (o 'enter' para terminar): ", int)
+            if id_estudiante is None:
+                break
         except ValueError:
-            print("Error: El id del estudiante debe ser un numero entero.")
+            perror("El id del estudiante debe ser un numero entero.")
             continue
 
     with conn.cursor() as cur:
         try:
             actualizados = 0
 
+            print()
             for id_estudiante in id_estudiantes:
                 cur.execute(sql_sentence, {
                     'i': id_estudiante,
@@ -1406,11 +1376,12 @@ def aumentar_curso(conn):
 
                 if cur.rowcount == 1:
                     actualizados += 1
+                    print(f"El curso de la estudiante con id {id_estudiante} ha sido actualizado correctamente.")
                 else:
                     print(f"El estudiante con id {id_estudiante} no existe.")  # Continuamos igualmente
 
             conn.commit()
-            print(f"Curso aumentado correctamente a {actualizados} estudiantes.")
+            print(f"\nCurso aumentado correctamente a {actualizados} estudiantes.")
             press_enter_to_continue()
 
         except psycopg2.Error as e:
@@ -1429,47 +1400,47 @@ def modificar_estudiante(conn):
     conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
     sql_update_nombre = """
-        update 
+        UPDATE 
             estudiante 
-        set 
+        SET 
             nombre = %(n)s 
-        where 
+        WHERE 
             id = %(i)s
     """
 
     sql_update_apellidos = """
-        update 
+        UPDATE 
             estudiante 
-        set 
+        SET 
             apellidos = %(a)s 
-        where 
+        WHERE 
             id = %(i)s
     """
 
     sql_update_curso = """
-        update 
+        UPDATE 
             estudiante 
-        set 
+        SET 
             curso = %(c)s 
-        where 
+        WHERE 
             id = %(i)s
     """
 
     sql_update_email = """
-        update 
+        UPDATE 
             estudiante 
-        set 
+        SET 
             email = %(e)s 
-        where 
+        WHERE 
             id = %(i)s
     """
 
     sql_update_telefono = """
-        update 
+        UPDATE 
             estudiante  
-        set 
+        SET 
             telefono = %(t)s 
-        where 
+        WHERE 
             id = %(i)s
     """
 
@@ -1477,9 +1448,8 @@ def modificar_estudiante(conn):
     print("| Modificar estudiante |")
     print("+----------------------+\n")
 
-    sid_estudiante = input("Id del estudiante: ").strip()
     try:
-        id_estudiante = int(sid_estudiante)
+        id_estudiante = get_parsed("Id del estudiante: ", int)
     except ValueError:
         perror("El id del estudiante debe ser un numero entero.")
         press_enter_to_continue()
@@ -1488,8 +1458,7 @@ def modificar_estudiante(conn):
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
             if input("Modificar nombre? (s/n): ").strip().lower() == "s":
-                snombre = input("Nuevo nombre: ").strip()
-                nombre = None if snombre == "" else snombre
+                nombre = get_string("Nuevo nombre: ")
 
                 cur.execute(sql_update_nombre, {
                     'n': nombre,
@@ -1497,8 +1466,7 @@ def modificar_estudiante(conn):
                 })
 
             if input("Modificar apellidos? (s/n): ").strip().lower() == "s":
-                sapellidos = input("Nuevos apellidos: ").strip()
-                apellidos = None if sapellidos == "" else sapellidos
+                apellidos = get_string("Nuevos apellidos: ")
 
                 cur.execute(sql_update_apellidos, {
                     'a': apellidos,
@@ -1506,11 +1474,10 @@ def modificar_estudiante(conn):
                 })
 
             if input("Modificar curso? (s/n):").strip().lower() == "s":
-                scurso = input("Nuevo curso: ").strip()
                 try:
-                    curso = None if scurso == "" else int(scurso)
+                    curso = get_parsed("Nuevo curso: ", int)
                 except ValueError:
-                    print("Error: El curso debe ser un numero entero.")
+                    perror("El curso debe ser un numero entero.")
                     return
 
                 cur.execute(sql_update_curso, {
@@ -1519,8 +1486,7 @@ def modificar_estudiante(conn):
                 })
 
             if input("Modificar email? (s/n): ").strip().lower() == "s":
-                semail = input("Nuevo email: ").strip()
-                email = None if semail == "" else semail
+                email = get_string("Nuevo email: ")
 
                 cur.execute(sql_update_email, {
                     'e': email,
@@ -1528,8 +1494,7 @@ def modificar_estudiante(conn):
                 })
 
             if input("Modificar telefono? (s/n): ").strip().lower() == "s":
-                stelefono = input("Nuevo telefono: ").strip()
-                telefono = None if stelefono == "" else stelefono
+                telefono = get_string("Nuevo telefono: ")
 
                 cur.execute(sql_update_telefono, {
                     't': telefono,
@@ -1574,18 +1539,19 @@ def eliminar_estudiante(conn):
     """
 
     sql_sentence = """
-        delete
-        from estudiante
-        where id = %(i)s
+        DELETE
+        FROM 
+            estudiante
+        WHERE 
+            id = %(i)s
     """
 
     print("\n+---------------------+")
     print("| Eliminar estudiante |")
     print("+---------------------+\n")
 
-    sid_estudiante = input("Id del estudiante: ")
     try:
-        id_estudiante = int(sid_estudiante)
+        id_estudiante = get_parsed("Id del estudiante: ", int)
     except ValueError:
         perror("El id del estudiante debe ser un numero entero.")
         press_enter_to_continue()
@@ -1599,10 +1565,10 @@ def eliminar_estudiante(conn):
 
             if cur.rowcount == 0:
                 conn.rollback()
-                print(f"El estudiante con id {id_estudiante} no existe.")
+                perror(f"El estudiante con id {id_estudiante} no existe.")
             else:
                 conn.commit()
-                print("Estudiante eliminado correctamente.")
+                print("\nEstudiante eliminado correctamente.")
 
             press_enter_to_continue()
 
@@ -1618,8 +1584,8 @@ def menu(conn):
     'q' para salir.
     """
 
-    menu_text = """
-    \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n
+    menu_text = f"""
+    {"\n" * 20}
                 +------+
                 | MENU |
                 +------+
