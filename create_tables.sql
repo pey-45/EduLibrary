@@ -17,7 +17,8 @@ CREATE TABLE estudiante (
     telefono VARCHAR(20),
     CONSTRAINT EstudiantePK PRIMARY KEY (id),
     CONSTRAINT EstudianteEmailUQ UNIQUE (email),
-    CONSTRAINT EstudianteTelefonoUQ UNIQUE (telefono)
+    CONSTRAINT EstudianteTelefonoUQ UNIQUE (telefono),
+    CONSTRAINT CursoGTZ CHECK (curso > 0)
 );
 
 CREATE TABLE libro (
@@ -43,7 +44,8 @@ CREATE TABLE preciolibro (
     idlibro BIGINT NOT NULL
         REFERENCES libro(id)
         ON DELETE CASCADE
-        ON UPDATE CASCADE
+        ON UPDATE CASCADE,
+    CONSTRAINT PrecioNN CHECK (precio >= 0)
 );
 
 CREATE TABLE prestamo (

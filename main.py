@@ -3,6 +3,7 @@ import psycopg2
 import psycopg2.extensions
 import psycopg2.extras
 import psycopg2.errorcodes
+from psycopg2.errorcodes import SERIALIZATION_FAILURE
 
 
 def print_generic_error(e): print(f"\nError: {getattr(e, 'pgcode', 'Unknown')} - {getattr(e, 'pgerror', 'Unknown error')}")
@@ -89,6 +90,7 @@ def anadir_libro(conn):
         press_enter_to_continue()
         return
 
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
     with conn.cursor() as cur:
         try:
             cur.execute(sql_sentence, {
@@ -191,6 +193,7 @@ def buscar_libros(conn):
         press_enter_to_continue()
         return
 
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
             cur.execute(sql_sentence,{
@@ -274,6 +277,7 @@ def consultar_libro(conn):
         press_enter_to_continue()
         return
 
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
             cur.execute(sql_sentence, {
@@ -312,8 +316,6 @@ def modificar_libro(conn):
     :param conn: La conexion activa con la base de datos
     :return: None
     """
-
-    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
     sql_update_titulo = """
         UPDATE
@@ -386,7 +388,8 @@ def modificar_libro(conn):
         press_enter_to_continue()
         return
 
-    with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
+    with conn.cursor() as cur:
         try:
             if input("Modificar titulo? (s/n): ").strip().lower() == "s":
                 titulo = get_string("Nuevo titulo: ")
@@ -482,6 +485,13 @@ def modificar_libro(conn):
                     perror("El libro especificado no existe.")
             elif e.pgcode == psycopg2.errorcodes.NUMERIC_VALUE_OUT_OF_RANGE:
                 perror("El precio es demasiado alto.")
+            elif e.pgcode == psycopg2.errorcodes.SERIALIZATION_FAILURE:
+                perror("Otro usuario ha modificado el libro mientras editabas.")
+                if input("Volver a intentarlo? (s/n): ").strip().lower() == "s":
+                    modificar_libro(conn)
+                    return
+                else:
+                    pmessage("No se pudo modificar el libro.")
             else:
                 print_generic_error(e)
             press_enter_to_continue()
@@ -511,6 +521,7 @@ def eliminar_libro(conn):
         press_enter_to_continue()
         return
 
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
     with conn.cursor() as cur:
         try:
             cur.execute(sql_sentence, {
@@ -538,8 +549,6 @@ def actualizar_precio(conn):
     :param conn: La conexion activa con la base de datos
     :return: None
     """
-
-    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
     sql_aumento_manual = """
         INSERT INTO
@@ -573,6 +582,7 @@ def actualizar_precio(conn):
         press_enter_to_continue()
         return
 
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
     with conn.cursor() as cur:
         try:
             if input("Aumentar precio con porcentaje? (s/n): ").lower() == "s":
@@ -613,8 +623,8 @@ def actualizar_precio(conn):
                 perror("El precio es demasiado alto.")
             elif e.pgcode == psycopg2.errorcodes.FOREIGN_KEY_VIOLATION:
                 perror("El libro especificado no existe.")
-            else:
-                print_generic_error(e)
+            elif e.pgcode == psycopg2.errorcodes.CHECK_VIOLATION:
+                perror("El precio debe ser un numero entero positivo.")
             press_enter_to_continue()
 
 # 7
@@ -646,6 +656,7 @@ def ver_historial_precios(conn):
         press_enter_to_continue()
         return
 
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
             cur.execute(sql_sentence, {
@@ -689,6 +700,7 @@ def anadir_categoria(conn):
     nombre = get_string("Nombre*: ")
     descripcion = get_string("Descripcion*: ")
 
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
     with conn.cursor() as cur:
         try:
             cur.execute(sql_sentence, {
@@ -726,8 +738,6 @@ def modificar_categoria(conn):
     :return: Nada
     """
 
-    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
-
     sql_update_nombre = """
         UPDATE 
             categoria 
@@ -756,7 +766,8 @@ def modificar_categoria(conn):
         press_enter_to_continue()
         return
 
-    with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
+    with conn.cursor() as cur:
         try:
             if input("Modificar nombre? (s/n): ").strip().lower() == "s":
                 nombre = get_string("Nuevo nombre: ")
@@ -790,6 +801,13 @@ def modificar_categoria(conn):
                     perror("El nombre es demasiado largo.")
                 elif e.diag.column_name == "descripcion":
                     perror("La descripcion es demasiado larga.")
+            elif e.pgcode == psycopg2.errorcodes.SERIALIZATION_FAILURE:
+                perror("Otro usuario ha modificado la categoria mientras editabas.")
+                if input("Volver a intentarlo? (s/n): ").strip().lower() == "s":
+                    modificar_categoria(conn)
+                    return
+                else:
+                    pmessage("No se pudo modificar la categoria.")
             else:
                 print_generic_error(e)
             press_enter_to_continue()
@@ -818,6 +836,7 @@ def eliminar_categoria(conn):
         press_enter_to_continue()
         return
 
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
     with conn.cursor() as cur:
         try:
             cur.execute(sql_sentence, {
@@ -870,6 +889,7 @@ def efectuar_prestamo(conn):
         press_enter_to_continue()
         return
 
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
     with conn.cursor() as cur:
         try:
             cur.execute(sql_sentence, {
@@ -929,6 +949,7 @@ def ver_historial_prestamos_libro(conn):
         press_enter_to_continue()
         return
 
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
             cur.execute(sql_sentence, {
@@ -990,6 +1011,7 @@ def ver_historial_prestamos_estudiante(conn):
         press_enter_to_continue()
         return
 
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
             cur.execute(sql_sentence, {
@@ -1053,6 +1075,7 @@ def consultar_prestamo(conn):
         press_enter_to_continue()
         return
 
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
             cur.execute(sql_sentence, {
@@ -1088,8 +1111,6 @@ def finalizar_prestamo(conn):
     :return: Nada
     """
 
-    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
-
     sql_sentence = """
         UPDATE 
             prestamo
@@ -1108,6 +1129,7 @@ def finalizar_prestamo(conn):
         press_enter_to_continue()
         return
 
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
     with conn.cursor() as cur:
         try:
             cur.execute(sql_sentence, {
@@ -1125,7 +1147,15 @@ def finalizar_prestamo(conn):
 
         except psycopg2.Error as e:
             conn.rollback()
-            print_generic_error(e)
+            if e.pgcode == psycopg2.errorcodes.SERIALIZATION_FAILURE:
+                perror("Otro usuario ha modificado el prestamo mientras editabas.")
+                if input("Volver a intentarlo? (s/n): ").strip().lower() == "s":
+                    finalizar_prestamo(conn)
+                    return
+                else:
+                    pmessage("No se pudo finalizar el prestamo.")
+            else:
+                print_generic_error(e)
             press_enter_to_continue()
 
 # 16
@@ -1152,6 +1182,7 @@ def eliminar_prestamo(conn):
         press_enter_to_continue()
         return
 
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
     with conn.cursor() as cur:
         try:
             cur.execute(sql_sentence, {
@@ -1201,6 +1232,7 @@ def anadir_estudiante(conn):
     email = get_string("Email*: ")
     telefono = get_string("Telefono (+XX XXX XX XX XX): ")
 
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
     with conn.cursor() as cur:
         try:
             cur.execute(sql_sentence, {
@@ -1240,6 +1272,8 @@ def anadir_estudiante(conn):
                     perror("El email es demasiado largo.")
                 elif e.diag.column_name == "telefono":
                     perror("El telefono es demasiado largo.")
+            elif e.pgcode == psycopg2.errorcodes.CHECK_VIOLATION:
+                perror("El curso debe ser un numero entero mayor que cero.")
             else:
                 print_generic_error(e)
             press_enter_to_continue()
@@ -1280,6 +1314,7 @@ def consultar_estudiante(conn):
         press_enter_to_continue()
         return
 
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         try:
             cur.execute(sql_sentence, {
@@ -1314,8 +1349,6 @@ def aumentar_curso(conn):
     :return: Nada
     """
 
-    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
-
     sql_sentence = """
         UPDATE
             estudiante
@@ -1337,6 +1370,7 @@ def aumentar_curso(conn):
             perror("El id del estudiante debe ser un numero entero.")
             continue
 
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
     with conn.cursor() as cur:
         try:
             actualizados = 0
@@ -1359,7 +1393,17 @@ def aumentar_curso(conn):
 
         except psycopg2.Error as e:
             conn.rollback()
-            print_generic_error(e)
+            if e.pgcode == psycopg2.errorcodes.CHECK_VIOLATION:
+                perror("El curso debe ser un numero entero mayor que cero.")
+            elif e.pgcode == psycopg2.errorcodes.SERIALIZATION_FAILURE:
+                perror("Otro usuario ha modificado el estudiante mientras editabas.")
+                if input("Volver a intentarlo? (s/n): ").strip().lower() == "s":
+                    aumentar_curso(conn)
+                    return
+                else:
+                    pmessage("No se pudo aumentar el curso.")
+            else:
+                print_generic_error(e)
             press_enter_to_continue()
 
 # 20
@@ -1369,8 +1413,6 @@ def modificar_estudiante(conn):
     :param conn: La conexion abierta a la BD
     :return: Nada
     """
-
-    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
     sql_update_nombre = """
         UPDATE 
@@ -1427,7 +1469,8 @@ def modificar_estudiante(conn):
         press_enter_to_continue()
         return
 
-    with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
+    with conn.cursor() as cur:
         try:
             if input("Modificar nombre? (s/n): ").strip().lower() == "s":
                 nombre = get_string("Nuevo nombre: ")
@@ -1498,6 +1541,15 @@ def modificar_estudiante(conn):
                     perror("El telefono es demasiado largo.")
             elif e.pgcode == psycopg2.errorcodes.NUMERIC_VALUE_OUT_OF_RANGE:
                 perror("El curso es demasiado grande.")
+            elif e.pgcode == psycopg2.errorcodes.CHECK_VIOLATION:
+                perror("El curso debe ser un numero entero mayo que cero.")
+            elif e.pgcode == psycopg2.errorcodes.SERIALIZATION_FAILURE:
+                perror("Otro usuario ha modificado el estudiante mientras editabas.")
+                if input("Volver a intentarlo? (s/n): ").strip().lower() == "s":
+                    modificar_estudiante(conn)
+                    return
+                else:
+                    pmessage("No se pudo modificar el estudiante.")
             else:
                 print_generic_error(e)
             press_enter_to_continue()
@@ -1527,6 +1579,7 @@ def eliminar_estudiante(conn):
         press_enter_to_continue()
         return
 
+    conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
     with conn.cursor() as cur:
         try:
             cur.execute(sql_sentence, {
